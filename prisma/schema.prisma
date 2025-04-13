@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Civilian
+  Admin
+  Administrative
+}
+
+enum Department {
+  Homicide
+  Narcotics
+  CyberCrime
+  Traffic
+  Forensics
+  InternalAffairs
+  K9Unit
+  SWAT
+  Vice
+  Patrol
+  Intelligence
+}
+
+enum Designation {
+  Officer
+  Detective
+  Sergeant
+  Lieutenant
+  Captain
+  Major
+  DeputyChief
+  Chief
+  Commissioner
+  Sheriff
+}
+
+enum Status {
+  Accepted
+  Rejected
+  Reported
+  Investigation
+  Closed
+  Pending
+}
+
+model User {
+  userId       Int       @id @default(autoincrement())
+  firstName    String
+  lastName     String?
+  dob          DateTime?
+  location     String?
+  phoneNumber  String?
+  profilePhoto Bytes?
+  email        String    @unique
+  password     String
+  role         Role
+
+  admin          Admin?
+  administrative Administrative?
+
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  accusedCrimes        Crime[]    @relation("Accused")
+  victimCrimes         Crime[]    @relation("Victim")
+  administrativeCrimes Crime[]    @relation("Administrative")
+  Crime                Crime[]
+  Evidence             Evidence[]
+}
+
+model Admin {
+  adminId Int  @id
+  user    User @relation(fields: [adminId], references: [userId], onDelete: Cascade)
+}
+
+model Administrative {
+  badgeNumber Int         @id @default(autoincrement())
+  userId      Int         @unique
+  designation Designation
+  department  Department
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  locationId Int     @id @default(autoincrement())
+  crime      Int
+  city       String
+  state      String
+  country    String
+  Crime      Crime[]
+}
+
+model Crime {
+  crimeId      Int      @id @unique @default(autoincrement())
+  crimeType    String
+  title        String
+  description  String?
+  dateOccurred DateTime
+  locationId   Int
+  status       Status
+  userId       Int?
+
+  accusedId        Int?
+  victimId         Int?
+  administrativeId Int?
+
+  location Location @relation(fields: [locationId], references: [locationId], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [userId], onDelete: SetNull)
+
+  accused        User? @relation("Accused", fields: [accusedId], references: [userId], onDelete: SetNull)
+  victim         User? @relation("Victim", fields: [victimId], references: [userId], onDelete: SetNull)
+  administrative User? @relation("Administrative", fields: [administrativeId], references: [userId], onDelete: SetNull)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Evidence  Evidence[]
+}
+
+model Evidence {
+  evidenceId   Int      @id @default(autoincrement())
+  crimeId      Int
+  evidenceType String
+  description  String?
+  img          Bytes?
+  submittedBy  Int
+  submittedAt  DateTime @default(now())
+
+  crime Crime @relation(fields: [crimeId], references: [crimeId], onDelete: Cascade)
+  user  User  @relation(fields: [submittedBy], references: [userId], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
