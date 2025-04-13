@@ -17,37 +17,34 @@ export const authOptions: NextAuthOptions = {
                     placeholder: "Civilian | Admin | Administrative",
                 },
             },
-            async authorize(credentials) {
-
+            async authorize(credentials: { email: string; password: string; role: string }) {
                 const { email, password, role } = credentials || {};
                 if (!email || !password || !role) {
-                    throw new Error("MISSING_FIELDS");
+                    throw new Error("Missing required fields: email, password, or role.");
                 }
-
 
                 const user = await prisma.user.findUnique({
                     where: { email },
                 });
                 if (!user) {
-                    throw new Error("USER_NOT_FOUND");
+                    throw new Error("User not found.");
                 }
-
 
                 const passwordMatch = await bcrypt.compare(password, user.password);
                 if (!passwordMatch) {
-                    throw new Error("INVALID_PASSWORD");
-                }
-                if (user.role !== role) {
-                    throw new Error("INVALID_ROLE");
+                    throw new Error("Invalid password.");
                 }
 
+                if (user.role !== role) {
+                    throw new Error("Invalid role.");
+                }
 
                 return {
                     id: user.userId,
                     name: `${user.firstName} ${user.lastName ?? ""}`,
                     email: user.email,
                     role: user.role,
-                }; ``
+                };
             },
         }),
     ],
@@ -58,11 +55,11 @@ export const authOptions: NextAuthOptions = {
 
     session: {
         strategy: "jwt",
-        maxAge: 60 * 60,
+        maxAge: 60 * 60, // 1 hour
     },
 
     jwt: {
-        maxAge: 60 * 60,
+        maxAge: 60 * 60, // 1 hour
     },
 
     callbacks: {

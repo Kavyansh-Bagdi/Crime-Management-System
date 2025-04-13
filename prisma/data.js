@@ -134,6 +134,22 @@ async function main() {
                 submittedBy: faker.helpers.arrayElement(users).userId,
             },
         });
+
+        // Add Crime Logs
+        await prisma.crimeLog.createMany({
+            data: [
+                {
+                    crimeId: crime.crimeId,
+                    userId: faker.helpers.arrayElement(users).userId,
+                    update: 'Initial report created.',
+                },
+                {
+                    crimeId: crime.crimeId,
+                    userId: faker.helpers.arrayElement(users).userId,
+                    update: 'Investigation started.',
+                },
+            ],
+        });
     }
 
     console.log('Data generation complete!');

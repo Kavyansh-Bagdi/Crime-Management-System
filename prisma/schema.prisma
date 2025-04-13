@@ -70,6 +70,7 @@ model User {
   administrativeCrimes Crime[]    @relation("Administrative")
   Crime                Crime[]
   Evidence             Evidence[]
+  CrimeLog             CrimeLog[]
 }
 
 model Admin {
@@ -118,6 +119,7 @@ model Crime {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Evidence  Evidence[]
+  crimeLogs CrimeLog[]
 }
 
 model Evidence {
@@ -134,4 +136,15 @@ model Evidence {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CrimeLog {
+  logId     Int      @id @default(autoincrement())
+  crimeId   Int
+  userId    Int
+  update    String   @db.Text
+  updatedAt DateTime @default(now())
+
+  crime Crime @relation(fields: [crimeId], references: [crimeId], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
