@@ -7,6 +7,7 @@ import {
   IconFolder,
   IconInnerShadowTop,
   IconListDetails,
+  IconReport,
   IconUsers,
 } from "@tabler/icons-react"
 import { useSession } from "next-auth/react"
@@ -30,9 +31,9 @@ const data = {
       icon: IconDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
+      title: "Crimes",
+      url: "/dashboard/crimes",
+      icon: IconReport,
     },
     {
       title: "Analytics",
@@ -40,13 +41,8 @@ const data = {
       icon: IconChartBar,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
       title: "Adminstrative",
-      url: "/dashboard/adminstrative",
+      url: "/dashboard/administrative",
       icon: IconUsers,
     },
   ],

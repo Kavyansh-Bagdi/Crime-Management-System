@@ -50,16 +50,15 @@ enum Status {
 }
 
 model User {
-  userId       Int       @id @default(autoincrement())
-  firstName    String
-  lastName     String?
-  dob          DateTime?
-  location     String?
-  phoneNumber  String?
-  profilePhoto Bytes?
-  email        String    @unique
-  password     String
-  role         Role
+  userId      Int       @id @default(autoincrement())
+  firstName   String
+  lastName    String?
+  dob         DateTime?
+  location    String?
+  phoneNumber String?
+  email       String    @unique
+  password    String
+  role        Role
 
   admin          Admin?
   administrative Administrative?
@@ -92,33 +91,29 @@ model Administrative {
 
 model Location {
   locationId Int     @id @default(autoincrement())
-  crime      Int
   city       String
   state      String
   country    String
-  Crime      Crime[]
+  crimes     Crime[]
 }
 
 model Crime {
-  crimeId      Int      @id @unique @default(autoincrement())
-  crimeType    String
-  title        String
-  description  String?
-  dateOccurred DateTime
-  locationId   Int
-  status       Status
-  userId       Int?
-
-  accusedId        Int?
-  victimId         Int?
+  crimeId          Int      @id @unique @default(autoincrement())
+  crimeType        String
+  title            String
+  description      String?
+  dateOccurred     DateTime
+  locationId       Int
+  status           Status
+  userId           Int?
   administrativeId Int?
 
-  location Location @relation(fields: [locationId], references: [locationId], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [userId], onDelete: SetNull)
+  location       Location @relation(fields: [locationId], references: [locationId], onDelete: Cascade)
+  user           User?    @relation(fields: [userId], references: [userId], onDelete: SetNull)
+  administrative User?    @relation("Administrative", fields: [administrativeId], references: [userId], onDelete: SetNull)
 
-  accused        User? @relation("Accused", fields: [accusedId], references: [userId], onDelete: SetNull)
-  victim         User? @relation("Victim", fields: [victimId], references: [userId], onDelete: SetNull)
-  administrative User? @relation("Administrative", fields: [administrativeId], references: [userId], onDelete: SetNull)
+  accused User[] @relation("Accused")
+  victim  User[] @relation("Victim")
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

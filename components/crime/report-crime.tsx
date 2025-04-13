@@ -1,86 +1,55 @@
-"use client"
+"use client";
 
-import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { toast } from "sonner"
+import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogTrigger,
     DialogContent,
-    DialogTitle,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
-} from "@/components/ui/dialog"
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import {
     ContextMenu,
     ContextMenuTrigger,
     ContextMenuContent,
     ContextMenuItem,
-} from "@/components/ui/context-menu"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { z } from "zod"
+} from "@/components/ui/context-menu";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Evidence {
-    evidenceType: string
-    description: string
-    img: string
+    evidenceType: string;
+    description: string;
+    img: string | null;
 }
 
 interface Form {
-    title: string
-    crimeType: string
-    description: string
-    dateOccurred: string
-    accused: { id: string; name: string }[]
-    victims: { id: string; name: string }[]
+    title: string;
+    crimeType: string;
+    description: string;
+    dateOccurred: string;
+    accused: { id: number; name: string }[];
+    victims: { id: number; name: string }[];
     location: {
-        city: string
-        state: string
-        country: string
-    }
-    evidence: Evidence[]
-}
-
-// Zod schema for form validation
-const crimeReportSchema = z.object({
-    title: z.string().min(1, "Title is required"),
-    crimeType: z.string().min(1, "Crime type is required"),
-    description: z.string().optional(),
-    dateOccurred: z.string().min(1, "Date occurred is required"),
-    accused: z.array(z.object({ id: z.string(), name: z.string() })),
-    victims: z.array(z.object({ id: z.string(), name: z.string() })),
-    location: z.object({
-        city: z.string().min(1, "City is required"),
-        state: z.string().min(1, "State is required"),
-        country: z.string().min(1, "Country is required"),
-    }),
-    evidence: z.array(
-        z.object({
-            evidenceType: z.string().min(1, "Evidence type is required"),
-            description: z.string().optional(),
-            img: z.string().min(1, "Evidence image is required"),
-        })
-    ),
-})
-
-interface UserSearchProps {
-    label: string
-    query: string
-    setQuery: (value: string) => void
-    suggestions: any[]
-    onSelect: (user: { id: string; name: string }) => void
+        city: string;
+        state: string;
+        country: string;
+    };
+    evidence: Evidence[];
 }
 
 const UserSearchInput = ({
@@ -89,40 +58,44 @@ const UserSearchInput = ({
     setQuery,
     suggestions,
     onSelect,
-}: UserSearchProps) => {
-    return (
-        <div className="grid gap-2 relative">
-            <Label>{label}</Label>
-            <Input
-                placeholder={`Search for ${label.toLowerCase()} by name or email`}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-            />
-            {suggestions.length > 0 && (
-                <ul className="absolute z-10 top-full mt-1 w-full bg-accent border rounded shadow">
-                    {suggestions.map((user, index) => (
-                        <li
-                            key={user.id ? `${user.id}` : `user-${index}`}
-                            className="px-3 py-2 hover:bg-background cursor-pointer text-sm"
-                            onClick={() =>
-                                onSelect({
-                                    id: user.id,
-                                    name: `${user.firstName} ${user.lastName || ""} (${user.email})`,
-                                })
-                            }
-                        >
-                            {user.firstName} {user.lastName} — {user.email}
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </div>
-    )
-}
+}: {
+    label: string;
+    query: string;
+    setQuery: (value: string) => void;
+    suggestions: any[];
+    onSelect: (user: { id: string; name: string }) => void;
+}) => (
+    <div className="grid gap-2 relative">
+        <Label>{label}</Label>
+        <Input
+            placeholder={`Search for ${label.toLowerCase()} by name or email`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+        />
+        {suggestions.length > 0 && (
+            <ul className="absolute z-10 top-full mt-1 w-full bg-accent border rounded shadow">
+                {suggestions.map((user, index) => (
+                    <li
+                        key={user.userId}
+                        className="px-3 py-2 hover:bg-background cursor-pointer text-sm"
+                        onClick={() =>
+                            onSelect({
+                                id: user.userId, // Ensure this is correctly set
+                                name: `${user.firstName} ${user.lastName || ""} (${user.email})`,
+                            })
+                        }
+                    >
+                        {user.firstName} {user.lastName} — {user.email}
+                    </li>
+                ))}
+            </ul>
+        )}
+    </div>
+);
 
 const CrimeReportForm = () => {
-    const { data: session } = useSession()
-    const router = useRouter()
+    const { data: session } = useSession();
+    const router = useRouter();
 
     const [form, setForm] = useState<Form>({
         title: "",
@@ -137,170 +110,169 @@ const CrimeReportForm = () => {
             country: "",
         },
         evidence: [],
-    })
+    });
 
-    // Separate states for accused and victim search queries and suggestions
-    const [accusedQuery, setAccusedQuery] = useState("")
-    const [accusedSuggestions, setAccusedSuggestions] = useState<any[]>([])
-    const [victimQuery, setVictimQuery] = useState("")
-    const [victimSuggestions, setVictimSuggestions] = useState<any[]>([])
-
-    const [loading, setLoading] = useState(false)
-    const [dialogOpen, setDialogOpen] = useState(false)
+    const [accusedQuery, setAccusedQuery] = useState("");
+    const [accusedSuggestions, setAccusedSuggestions] = useState<any[]>([]);
+    const [victimQuery, setVictimQuery] = useState("");
+    const [victimSuggestions, setVictimSuggestions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
     const [newEvidence, setNewEvidence] = useState<Evidence>({
         evidenceType: "",
         description: "",
-        img: "",
-    })
-    const [currentFile, setCurrentFile] = useState<File | null>(null)
-    const [editingIndex, setEditingIndex] = useState<number | null>(null)
+        img: null,
+    });
+    const [currentFile, setCurrentFile] = useState<File | null>(null);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [dateOccurred, setDateOccurred] = useState<Date | undefined>(undefined);
 
-    // Generic function to fetch user suggestions
-    const fetchUserSuggestions = async (
-        query: string,
-        setSuggestions: (val: any[]) => void
-    ) => {
-        if (query.length < 2) return setSuggestions([])
+    // Fetch user suggestions
+    const fetchUserSuggestions = async (query: string, setSuggestions: (val: any[]) => void) => {
+        if (query.length < 2) return setSuggestions([]);
         try {
-            const res = await fetch(`/api/users?query=${query}`)
-            const data = await res.json()
-            setSuggestions(data.slice(0, 5))
+            const res = await fetch(`/api/users?query=${query}`);
+            const data = await res.json();
+            setSuggestions(data.slice(0, 5));
         } catch (err) {
-            console.error("User fetch error:", err)
-            setSuggestions([])
+            console.error("User fetch error:", err);
+            setSuggestions([]);
         }
-    }
+    };
 
     useEffect(() => {
-        const timeout = setTimeout(() => {
-            fetchUserSuggestions(accusedQuery, setAccusedSuggestions)
-        }, 300)
-        return () => clearTimeout(timeout)
-    }, [accusedQuery])
+        const timeout = setTimeout(() => fetchUserSuggestions(accusedQuery, setAccusedSuggestions), 300);
+        return () => clearTimeout(timeout);
+    }, [accusedQuery]);
 
     useEffect(() => {
-        const timeout = setTimeout(() => {
-            fetchUserSuggestions(victimQuery, setVictimSuggestions)
-        }, 300)
-        return () => clearTimeout(timeout)
-    }, [victimQuery])
+        const timeout = setTimeout(() => fetchUserSuggestions(victimQuery, setVictimSuggestions), 300);
+        return () => clearTimeout(timeout);
+    }, [victimQuery]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
+        const { name, value } = e.target;
         if (name in form.location) {
             setForm((prev) => ({
                 ...prev,
                 location: { ...prev.location, [name]: value },
-            }))
+            }));
         } else {
-            setForm((prev) => ({ ...prev, [name]: value }))
+            setForm((prev) => ({ ...prev, [name]: value }));
         }
-    }
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files?.[0]) setCurrentFile(e.target.files[0])
-    }
+        if (e.target.files?.[0]) setCurrentFile(e.target.files[0]);
+    };
 
     const handleEvidenceDetailsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target
-        setNewEvidence((prev) => ({ ...prev, [name]: value }))
-    }
+        const { name, value } = e.target;
+        setNewEvidence((prev) => ({ ...prev, [name]: value }));
+    };
 
     const handleAddEvidence = async () => {
-        if (!currentFile) return
-        const base64 = await fileToBase64(currentFile)
-        const updatedEvidence = { ...newEvidence, img: base64 }
-
-        setForm((prev) => ({
-            ...prev,
-            evidence:
-                editingIndex !== null
-                    ? prev.evidence.map((e, i) => (i === editingIndex ? updatedEvidence : e))
-                    : [...prev.evidence, updatedEvidence],
-        }))
-
-        setDialogOpen(false)
-        setNewEvidence({ evidenceType: "", description: "", img: "" })
-        setCurrentFile(null)
-        setEditingIndex(null)
-    }
-
-    const handleEditEvidence = (index: number) => {
-        setNewEvidence(form.evidence[index])
-        setEditingIndex(index)
-        setDialogOpen(true)
-    }
-
-    const handleDeleteEvidence = (index: number) => {
-        setForm((prev) => ({
-            ...prev,
-            evidence: prev.evidence.filter((_, i) => i !== index),
-        }))
-    }
-
-    const handleAddAccused = (user: { id: string; name: string }) => {
-        setForm((prev) => ({
-            ...prev,
-            accused: [...prev.accused, user],
-        }))
-        setAccusedQuery("")
-        setAccusedSuggestions([])
-    }
-
-    const handleAddVictim = (user: { id: string; name: string }) => {
-        setForm((prev) => ({
-            ...prev,
-            victims: [...prev.victims, user],
-        }))
-        setVictimQuery("")
-        setVictimSuggestions([])
-    }
-
-    const handleRemoveAccused = (id: string) => {
-        setForm((prev) => ({
-            ...prev,
-            accused: prev.accused.filter((user) => user.id !== id),
-        }))
-    }
-
-    const handleRemoveVictim = (id: string) => {
-        setForm((prev) => ({
-            ...prev,
-            victims: prev.victims.filter((user) => user.id !== id),
-        }))
-    }
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
-        // Validate form data using Zod
-        const parseResult = crimeReportSchema.safeParse(form)
-        if (!parseResult.success) {
-            toast.error("Please fill out all required fields correctly.")
-            setLoading(false)
-            return
+        if (!currentFile) {
+            toast.error("Please upload a valid file.");
+            return;
         }
         try {
+            const base64 = await fileToBase64(currentFile);
+            const updatedEvidence = { ...newEvidence, img: base64 };
+            setForm((prev) => ({
+                ...prev,
+                evidence:
+                    editingIndex !== null
+                        ? prev.evidence.map((e, i) => (i === editingIndex ? updatedEvidence : e))
+                        : [...prev.evidence, updatedEvidence],
+            }));
+            resetEvidenceForm();
+        } catch (error) {
+            toast.error("Failed to process the file. Please try again.");
+        }
+    };
+
+    const resetEvidenceForm = () => {
+        setDialogOpen(false);
+        setNewEvidence({ evidenceType: "", description: "", img: null });
+        setCurrentFile(null);
+        setEditingIndex(null);
+    };
+
+    const handleAddUser = (user: { id: number; name: string }, type: "accused" | "victims") => {
+        if (!user.id || isNaN(user.id)) {
+            toast.error("Invalid user selected.");
+            return;
+        }
+        if (form[type].some((u) => u.id === user.id)) return;
+        setForm((prev) => ({
+            ...prev,
+            [type]: [...prev[type], user],
+        }));
+        if (type === "accused") {
+            setAccusedQuery("");
+            setAccusedSuggestions([]);
+        } else {
+            setVictimQuery("");
+            setVictimSuggestions([]);
+        }
+    };
+
+    const handleRemoveUser = (id: number, type: "accused" | "victims") => {
+        setForm((prev) => ({
+            ...prev,
+            [type]: prev[type].filter((user) => user.id !== id),
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!form.title || !form.crimeType || !dateOccurred) {
+            toast.error("Please fill out all required fields.");
+            return;
+        }
+
+        if (!form.location.city || !form.location.state || !form.location.country) {
+            toast.error("Please provide a valid location.");
+            return;
+        }
+
+        setLoading(true);
+        try {
             const payload = {
-                ...form,
-                accused: form.accused.map((a) => a.id),
-                victims: form.victims.map((v) => v.id),
-            }
+                title: form.title,
+                crimeType: form.crimeType,
+                description: form.description,
+                dateOccurred: dateOccurred?.toISOString().split("T")[0],
+                accusedIds: form.accused.map((accused) => Number(accused.id)),
+                victimIds: form.victims.map((victim) => Number(victim.id)),
+                location: form.location,
+                evidence: form.evidence.map((evidence) => ({
+                    evidenceType: evidence.evidenceType,
+                    description: evidence.description,
+                    img: evidence.img,
+                })),
+            };
+
             const res = await fetch("/api/crime", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
-            })
-            const data = await res.json()
-            if (!res.ok) throw new Error(data.error || "Failed to submit crime report")
-            toast.success("Crime reported successfully!")
-            router.push("/dashboard")
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Failed to submit crime report");
+
+            toast.success("Crime reported successfully!");
+            router.push("/dashboard");
         } catch (error: any) {
-            toast.error(error.message)
+            toast.error(error.message);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
+
 
     return (
         <Card className="lex items-center justify-between px-4 lg:px-6 md:mx-6">
@@ -352,23 +324,18 @@ const CrimeReportForm = () => {
                                     variant="outline"
                                     className={cn(
                                         "max-w-full w-3/4 justify-start text-left font-normal",
-                                        !form.dateOccurred && "text-muted-foreground"
+                                        !dateOccurred && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {form.dateOccurred ? format(new Date(form.dateOccurred), "PPP") : "Pick a date"}
+                                    {dateOccurred ? format(dateOccurred, "PPP") : "Pick a date"}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
                                 <Calendar
                                     mode="single"
-                                    selected={form.dateOccurred ? new Date(form.dateOccurred) : undefined}
-                                    onSelect={(date) =>
-                                        setForm((prev) => ({
-                                            ...prev,
-                                            dateOccurred: date?.toISOString().split("T")[0] || "",
-                                        }))
-                                    }
+                                    selected={dateOccurred}
+                                    onSelect={(date) => setDateOccurred(date)}
                                     initialFocus
                                 />
                             </PopoverContent>
@@ -406,7 +373,7 @@ const CrimeReportForm = () => {
                             query={accusedQuery}
                             setQuery={setAccusedQuery}
                             suggestions={accusedSuggestions}
-                            onSelect={handleAddAccused}
+                            onSelect={(user) => handleAddUser(user, "accused")}
                         />
                         {form.accused.length > 0 && (
                             <div className="space-y-2">
@@ -418,7 +385,7 @@ const CrimeReportForm = () => {
                                         <span>{accused.name}</span>
                                         <Button
                                             type="button"
-                                            onClick={() => handleRemoveAccused(accused.id)}
+                                            onClick={() => handleRemoveUser(accused.id, "accused")}
                                             variant="outline"
                                             size="sm"
                                         >
@@ -437,7 +404,7 @@ const CrimeReportForm = () => {
                             query={victimQuery}
                             setQuery={setVictimQuery}
                             suggestions={victimSuggestions}
-                            onSelect={handleAddVictim}
+                            onSelect={(user) => handleAddUser(user, "victims")} // Ensure correct function call
                         />
                         {form.victims.length > 0 && (
                             <div className="space-y-2">
@@ -449,7 +416,7 @@ const CrimeReportForm = () => {
                                         <span>{victim.name}</span>
                                         <Button
                                             type="button"
-                                            onClick={() => handleRemoveVictim(victim.id)}
+                                            onClick={() => handleRemoveUser(victim.id, "victims")} // Ensure correct function call
                                             variant="outline"
                                             size="sm"
                                         >
@@ -554,6 +521,7 @@ const CrimeReportForm = () => {
 
 export default CrimeReportForm
 
+// Helper function: converts a File object to a base64 string
 function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader()

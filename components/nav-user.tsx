@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useRouter } from "next/navigation"; // Import useRouter
 
 export function NavUser({
   user,
@@ -38,7 +39,12 @@ export function NavUser({
     avatar: string
   }
 }) {
-  const { isMobile } = useSidebar()
+  const { isMobile } = useSidebar();
+  const router = useRouter();
+
+  const handleRestrictedAccess = () => {
+    router.push('/error/403'); // Redirect to 403 error page
+  };
 
   return (
     <SidebarMenu>
@@ -84,9 +90,13 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                 <IconUserCircle />
                 Account
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleRestrictedAccess}>
+                <IconNotification />
+                Restricted Area
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

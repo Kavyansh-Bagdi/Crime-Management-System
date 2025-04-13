@@ -19,7 +19,7 @@ export default function NotFoundError() {
           <Button variant='outline' onClick={() => router.back()}>
             Go Back
           </Button>
-          <Button onClick={() => router.push('/')}>
+          <Button onClick={() => router.push('/dashboard')}>
             Back to Home
           </Button>
         </div>
