@@ -7,12 +7,13 @@ import { z } from "zod"
 const evidenceSchema = z.object({
     evidenceType: z.string().min(1),
     description: z.string().optional(),
-    img: z.union([
-        z.string().refine(val => val.startsWith("data:image/"), {
-            message: "Invalid image format",
-        }),
-        z.null(),
-    ]),
+    img: z
+        .string()
+        .nullable()
+        .refine(
+            (val) => val === null || val.startsWith("data:image/"),
+            { message: "Invalid image format" }
+        ),
 })
 
 const crimeSchema = z.object({
@@ -24,7 +25,6 @@ const crimeSchema = z.object({
     }),
     accusedId: z.number().optional(),
     victimId: z.number().optional(),
-    administrativeId: z.number().optional(),
     location: z.object({
         city: z.string(),
         state: z.string(),
@@ -53,26 +53,21 @@ export async function POST(req: Request) {
         dateOccurred,
         accusedId,
         victimId,
-        administrativeId,
         location,
         evidence = [],
     } = parsed.data
 
     try {
-        // Validate all users exist
-        const userChecks = await Promise.all([
+        // Validate user existence
+        const [reporter, accusedUser, victimUser] = await Promise.all([
             prisma.user.findUnique({ where: { userId: Number(session.user.id) } }),
             accusedId ? prisma.user.findUnique({ where: { userId: accusedId } }) : Promise.resolve(null),
             victimId ? prisma.user.findUnique({ where: { userId: victimId } }) : Promise.resolve(null),
-            administrativeId ? prisma.user.findUnique({ where: { userId: administrativeId } }) : Promise.resolve(null),
         ])
-
-        const [reporter, accusedUser, victimUser, adminUser] = userChecks
 
         if (!reporter) return NextResponse.json({ error: "Reporting user not found" }, { status: 400 })
         if (accusedId && !accusedUser) return NextResponse.json({ error: "Accused user not found" }, { status: 400 })
         if (victimId && !victimUser) return NextResponse.json({ error: "Victim user not found" }, { status: 400 })
-        if (administrativeId && !adminUser) return NextResponse.json({ error: "Administrative user not found" }, { status: 400 })
 
         // Create location
         const createdLocation = await prisma.location.create({
@@ -95,12 +90,11 @@ export async function POST(req: Request) {
                 userId: Number(session.user.id),
                 accusedId,
                 victimId,
-                administrativeId,
                 locationId: createdLocation.locationId,
             },
         })
 
-        // Insert Evidence if provided
+        // Insert evidence
         if (evidence.length > 0) {
             await Promise.all(
                 evidence.map((ev) =>
@@ -108,7 +102,7 @@ export async function POST(req: Request) {
                         data: {
                             crimeId: newCrime.crimeId,
                             evidenceType: ev.evidenceType,
-                            description: ev.description,
+                            description: ev.description || "",
                             img: ev.img ? Buffer.from(ev.img.split(",")[1], "base64") : undefined,
                             submittedBy: Number(session.user.id),
                         },
