@@ -1,10 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation"; // Import useRouter
+import {
+    ColumnDef,
+    flexRender,
+    getCoreRowModel,
+    getPaginationRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+    VisibilityState,
+} from "@tanstack/react-table";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    IconChevronLeft,
+    IconChevronRight,
+    IconChevronsLeft,
+    IconChevronsRight,
+    IconLayoutColumns,
+} from "@tabler/icons-react";
+import {
+    IconChartBar,
+    IconDashboard,
+    IconFolder,
+    IconInnerShadowTop,
+    IconListDetails,
+    IconReport,
+    IconUsers,
+} from "@tabler/icons-react";
 
 interface Crime {
     crimeId: number;
@@ -15,116 +61,276 @@ interface Crime {
 }
 
 export default function CrimesPage() {
-    const router = useRouter();
+    const router = useRouter(); // Initialize useRouter
     const [crimes, setCrimes] = useState<Crime[]>([]);
-    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [globalFilter, setGlobalFilter] = useState("");
+    const [sorting, setSorting] = useState([]);
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [recordsPerPage, setRecordsPerPage] = useState(10);
+    const [pageIndex, setPageIndex] = useState(0);
 
     useEffect(() => {
         async function fetchCrimes() {
             try {
                 const response = await fetch("/api/crimes");
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Failed to fetch crimes");
-                }
+                if (!response.ok) throw new Error("Failed to fetch crimes");
                 const data = await response.json();
                 setCrimes(data);
             } catch (error) {
                 console.error("Error fetching crimes:", error);
-                setError(error.message);
+            } finally {
+                setIsLoading(false);
             }
         }
         fetchCrimes();
     }, []);
 
+    const columns: ColumnDef<Crime>[] = [
+        { accessorKey: "crimeId", header: "ID" },
+        { accessorKey: "title", header: "Title" },
+        { accessorKey: "crimeType", header: "Type" },
+        { accessorKey: "status", header: "Status" },
+        {
+            accessorKey: "dateOccurred",
+            header: "Date Occurred",
+            cell: ({ row }) => new Date(row.original.dateOccurred).toLocaleDateString(),
+        },
+        {
+            accessorKey: "actions",
+            header: "Actions",
+            cell: ({ row }) => (
+                <Button onClick={() => handleViewDetails(row.original.crimeId)}>View Details</Button>
+            ),
+        },
+    ];
+
     const handleViewDetails = (crimeId: number) => {
-        router.push(`/dashboard/crimes/${crimeId}`);
+        router.push(`/dashboard/crimes/${crimeId}`); // Redirect to the dynamic route
     };
 
-    const stats = {
-        total: crimes.length,
-        closed: crimes.filter((crime) => crime.status === "Closed").length,
-        pending: crimes.filter((crime) => crime.status === "Pending").length,
-        investigation: crimes.filter((crime) => crime.status === "Investigation").length,
-    };
+    const table = useReactTable({
+        data: crimes,
+        columns,
+        state: {
+            globalFilter,
+            sorting,
+            columnVisibility,
+            pagination: {
+                pageIndex,
+                pageSize: recordsPerPage,
+            },
+        },
+        onGlobalFilterChange: setGlobalFilter,
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        onPaginationChange: (updater) => {
+            const newPagination =
+                typeof updater === "function"
+                    ? updater({ pageIndex, pageSize: recordsPerPage })
+                    : updater;
+            setPageIndex(newPagination.pageIndex);
+        },
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        globalFilterFn: (row, columnId, filterValue) => {
+            const value = row.getValue(columnId);
+            return String(value).toLowerCase().includes(filterValue.toLowerCase());
+        },
+    });
 
-    if (error) {
-        return <div className="text-red-500 text-center">{error}</div>;
+    if (isLoading) {
+        return <p>Loading...</p>;
     }
-
-    if (crimes.length === 0) {
-        return <div>Loading...</div>;
-    }
+    const totalCrimes = crimes.length;
+    const openCrimes = crimes.filter(c => c.status.toLowerCase() === "open").length;
+    const closedCrimes = crimes.filter(c => c.status.toLowerCase() === "closed").length;
+    const uniqueTypes = [...new Set(crimes.map(c => c.crimeType))];
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Crimes</h1>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Total Crimes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xl font-bold">{stats.total}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Closed</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xl font-bold">{stats.closed}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pending</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xl font-bold">{stats.pending}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Under Investigation</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xl font-bold">{stats.investigation}</p>
-                    </CardContent>
-                </Card>
+        <div className="space-y-4 p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Total Crimes Card */}
+                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-2">
+                        <IconDashboard className="h-5 w-5 text-muted-foreground" />
+                        <div className="text-sm text-muted-foreground">Total Crimes</div>
+                    </div>
+                    <div className="text-4xl font-bold">{totalCrimes}</div> {/* Increased the number size */}
+                    <p className="text-xs text-muted-foreground mt-2"> {/* Decreased the description size */}
+                        The total number of reported crimes so far in the system.
+                    </p>
+                </div>
+
+                {/* Open Cases Card */}
+                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-2">
+                        <IconFolder className="h-5 w-5 text-muted-foreground" />
+                        <div className="text-sm text-muted-foreground">Open Cases</div>
+                    </div>
+                    <div className="text-4xl font-bold">{openCrimes}</div> {/* Increased the number size */}
+                    <p className="text-xs text-muted-foreground mt-2"> {/* Decreased the description size */}
+                        The number of active or ongoing criminal cases that are currently being investigated.
+                    </p>
+                </div>
+
+                {/* Closed Cases Card */}
+                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-2">
+                        <IconReport className="h-5 w-5 text-muted-foreground" />
+                        <div className="text-sm text-muted-foreground">Closed Cases</div>
+                    </div>
+                    <div className="text-4xl font-bold">{closedCrimes}</div> {/* Increased the number size */}
+                    <p className="text-xs text-muted-foreground mt-2"> {/* Decreased the description size */}
+                        The number of criminal cases that have been resolved and closed.
+                    </p>
+                </div>
+
+                {/* Crime Types Card */}
+                <div className="rounded-lg border bg-card p-4 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-2">
+                        <IconChartBar className="h-5 w-5 text-muted-foreground" />
+                        <div className="text-sm text-muted-foreground">Crime Types</div>
+                    </div>
+                    <div className="text-4xl font-bold">{uniqueTypes.length}</div> {/* Increased the number size */}
+                    <p className="text-xs text-muted-foreground mt-2"> {/* Decreased the description size */}
+                        The total number of unique crime categories recorded in the system.
+                    </p>
+                </div>
             </div>
-            <Separator className="my-6" />
-            <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left">ID</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Title</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Type</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Date Occurred</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {crimes.map((crime) => (
-                            <tr key={crime.crimeId} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2">{crime.crimeId}</td>
-                                <td className="border border-gray-300 px-4 py-2">{crime.title}</td>
-                                <td className="border border-gray-300 px-4 py-2">{crime.crimeType}</td>
-                                <td className="border border-gray-300 px-4 py-2">{crime.status}</td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                    {new Date(crime.dateOccurred).toLocaleDateString()}
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                    <Button onClick={() => handleViewDetails(crime.crimeId)}>
-                                        View Details
-                                    </Button>
-                                </td>
-                            </tr>
+
+            <div className="flex items-center justify-between">
+                <Input
+                    placeholder="Search crimes..."
+                    value={globalFilter ?? ""}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="max-w-sm"
+                />
+                <div className="flex items-center gap-4">
+                    <Select
+                        value={recordsPerPage.toString()}
+                        onValueChange={(value) => {
+                            setRecordsPerPage(Number(value));
+                            setPageIndex(0); // reset to first page
+                        }}
+                    >
+                        <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Records per page" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="5">5</SelectItem>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="20">20</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <IconLayoutColumns className="mr-2 h-4 w-4" />
+                                Customize Columns
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                            {table
+                                .getAllColumns()
+                                .filter((column) => column.getCanHide())
+                                .map((column) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={column.id}
+                                        className="capitalize"
+                                        checked={column.getIsVisible()}
+                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                    >
+                                        {column.id}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                    <TableHeader className="bg-accent">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => (
+                                    <TableHead key={header.id} className="px-4 py-2">
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
+                    </TableHeader>
+                    <TableBody>
+                        {table.getRowModel().rows.length > 0 ? (
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow key={row.id} className="hover:bg-muted">
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id} className="px-4 py-2">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={columns.length} className="text-center">
+                                    No data available
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        className="hidden h-8 w-8 p-0 lg:flex"
+                        onClick={() => table.setPageIndex(0)}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        <span className="sr-only">Go to first page</span>
+                        <IconChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        <span className="sr-only">Go to previous page</span>
+                        <IconChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="h-8 w-8 p-0"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        <span className="sr-only">Go to next page</span>
+                        <IconChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="hidden h-8 w-8 p-0 lg:flex"
+                        onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        <span className="sr-only">Go to last page</span>
+                        <IconChevronsRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
         </div>
     );
