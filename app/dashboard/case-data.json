@@ -1,0 +1,21 @@
+[
+    {
+        "id": 1,
+        "caseId": "C-001",
+        "crimeType": "Theft",
+        "location": "Downtown",
+        "time": "2024-04-01 14:30",
+        "status": "Resolved",
+        "assignedOfficer": "Officer A"
+    },
+    {
+        "id": 2,
+        "caseId": "C-002",
+        "crimeType": "Assault",
+        "location": "Uptown",
+        "time": "2024-04-02 18:00",
+        "status": "In Progress",
+        "assignedOfficer": "Officer B"
+    }
+    // ...more cases...
+]

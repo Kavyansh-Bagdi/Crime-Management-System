@@ -144,3 +144,49 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
     }
 }
+
+export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const crimeId = searchParams.get("crimeId");
+
+    try {
+        if (crimeId) {
+            // Fetch a single crime by ID
+            const crime = await prisma.crime.findUnique({
+                where: { crimeId: Number(crimeId) },
+                include: {
+                    location: true,
+                    user: true, // Include the user who reported the crime
+                    administrative: true, // Directly include the administrative user
+                    victim: true, // Include victim details
+                    accused: true, // Include accused details
+                    Evidence: true, // Use the correct relation name for evidence
+                },
+            });
+
+            if (!crime) {
+                return NextResponse.json({ error: "Crime not found" }, { status: 404 });
+            }
+
+            return NextResponse.json(crime);
+        } else {
+            // Fetch all crimes
+            const crimes = await prisma.crime.findMany({
+                include: {
+                    location: true,
+                    user: true, // Include the user who reported the crime
+                    administrative: true, // Directly include the administrative user
+                    victim: true, // Include victim details
+                    accused: true, // Include accused details
+                    Evidence: true, // Use the correct relation name for evidence
+                },
+            });
+
+            return NextResponse.json(crimes);
+        }
+    } catch (error) {
+        console.error("Error fetching crimes:", error.message); // Log the error message
+        console.error("Stack trace:", error.stack); // Log the stack trace for debugging
+        return NextResponse.json({ error: "Failed to fetch crimes", details: error.message }, { status: 500 });
+    }
+}

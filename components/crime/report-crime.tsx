@@ -273,6 +273,20 @@ const CrimeReportForm = () => {
         }
     };
 
+    const handleEditEvidence = (index: number) => {
+        const evidenceToEdit = form.evidence[index];
+        setNewEvidence(evidenceToEdit);
+        setCurrentFile(null); // Reset file input
+        setEditingIndex(index);
+        setDialogOpen(true);
+    };
+
+    const handleDeleteEvidence = (index: number) => {
+        setForm((prev) => ({
+            ...prev,
+            evidence: prev.evidence.filter((_, i) => i !== index),
+        }));
+    };
 
     return (
         <Card className="lex items-center justify-between px-4 lg:px-6 md:mx-6">

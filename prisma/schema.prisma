@@ -101,7 +101,7 @@ model Crime {
   crimeId          Int      @id @unique @default(autoincrement())
   crimeType        String
   title            String
-  description      String?
+  description      String?  @db.Text
   dateOccurred     DateTime
   locationId       Int
   status           Status
