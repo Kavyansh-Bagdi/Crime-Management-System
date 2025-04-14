@@ -123,19 +123,19 @@ model Crime {
 }
 
 model Evidence {
-  evidenceId   Int      @id @default(autoincrement())
-  crimeId      Int
-  evidenceType String
-  description  String?
-  img          Bytes?
-  submittedBy  Int
-  submittedAt  DateTime @default(now())
+  evidenceId  Int     @id @default(autoincrement())
+  crime       Crime   @relation(fields: [crimeId], references: [crimeId])
+  crimeId     Int
+  description String
+  title       String?
 
-  crime Crime @relation(fields: [crimeId], references: [crimeId], onDelete: Cascade)
-  user  User  @relation(fields: [submittedBy], references: [userId], onDelete: Cascade)
-
+  img       Bytes?
+  mime      String?
+  filename  String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  submitedBy Int?
+  User       User? @relation(fields: [submitedBy], references: [userId])
 }
 
 model CrimeLog {

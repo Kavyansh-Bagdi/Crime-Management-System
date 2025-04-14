@@ -32,9 +32,11 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Evidence {
-    evidenceType: string;
+    title: string; // Updated to match the Prisma schema (if typo is intentional)
     description: string;
     img: string | null;
+    mime?: string;
+    filename?: string;
 }
 
 interface Form {
@@ -74,7 +76,7 @@ const UserSearchInput = ({
         />
         {suggestions.length > 0 && (
             <ul className="absolute z-10 top-full mt-1 w-full bg-accent border rounded shadow">
-                {suggestions.map((user, index) => (
+                {suggestions.map((user) => (
                     <li
                         key={user.userId}
                         className="px-3 py-2 hover:bg-background cursor-pointer text-sm"
@@ -119,7 +121,7 @@ const CrimeReportForm = () => {
     const [loading, setLoading] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [newEvidence, setNewEvidence] = useState<Evidence>({
-        evidenceType: "",
+        title: "",
         description: "",
         img: null,
     });
@@ -172,13 +174,22 @@ const CrimeReportForm = () => {
     };
 
     const handleAddEvidence = async () => {
+        if (!newEvidence.title) { // Validate title
+            toast.error("Please provide a title for the evidence.");
+            return;
+        }
         if (!currentFile) {
             toast.error("Please upload a valid file.");
             return;
         }
         try {
             const base64 = await fileToBase64(currentFile);
-            const updatedEvidence = { ...newEvidence, img: base64 };
+            const updatedEvidence = {
+                ...newEvidence,
+                img: base64,
+                mime: currentFile.type, // Handles mime
+                filename: currentFile.name, // Handles filename
+            };
             setForm((prev) => ({
                 ...prev,
                 evidence:
@@ -194,7 +205,7 @@ const CrimeReportForm = () => {
 
     const resetEvidenceForm = () => {
         setDialogOpen(false);
-        setNewEvidence({ evidenceType: "", description: "", img: null });
+        setNewEvidence({ title: "", description: "", img: null });
         setCurrentFile(null);
         setEditingIndex(null);
     };
@@ -249,13 +260,15 @@ const CrimeReportForm = () => {
                 victimIds: form.victims.map((victim) => Number(victim.id)),
                 location: form.location,
                 evidence: form.evidence.map((evidence) => ({
-                    evidenceType: evidence.evidenceType,
+                    title: evidence.title,
                     description: evidence.description,
                     img: evidence.img,
+                    mime: evidence.mime,
+                    filename: evidence.filename,
                 })),
             };
 
-            const res = await fetch("/api/crime", {
+            const res = await fetch("/api/crimes", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -289,7 +302,7 @@ const CrimeReportForm = () => {
     };
 
     return (
-        <Card className="lex items-center justify-between px-4 lg:px-6 md:mx-6">
+        <Card className="flex items-center justify-between px-4 lg:px-6 md:mx-6">
             <CardContent className="w-full">
                 <h2 className="text-2xl font-semibold mb-4">Report a Crime</h2>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -466,9 +479,9 @@ const CrimeReportForm = () => {
                                 <div className="space-y-4">
                                     <Label>Evidence Type</Label>
                                     <Input
-                                        name="evidenceType"
+                                        name="title"
                                         placeholder="E.g., Photo, Video, Document"
-                                        value={newEvidence.evidenceType}
+                                        value={newEvidence.title}
                                         onChange={handleEvidenceDetailsChange}
                                     />
                                     <Label>Description</Label>
@@ -502,11 +515,11 @@ const CrimeReportForm = () => {
                                         <Card className="cursor-pointer">
                                             <CardContent>
                                                 <img
-                                                    src={evidence.img}
+                                                    src={evidence.img || ""}
                                                     alt="Evidence"
                                                     className="w-full h-auto mb-2 rounded"
                                                 />
-                                                <h3 className="font-semibold">{evidence.evidenceType}</h3>
+                                                <h3 className="font-semibold">{evidence.title}</h3>
                                                 <p>{evidence.description}</p>
                                             </CardContent>
                                         </Card>

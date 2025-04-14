@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
     // Delete all existing data
     await prisma.evidence.deleteMany({});
+    await prisma.crimeLog.deleteMany({});
     await prisma.crime.deleteMany({});
     await prisma.administrative.deleteMany({});
     await prisma.admin.deleteMany({});
@@ -17,7 +18,6 @@ async function main() {
     const users = [];
     const admins = [];
     const administratives = [];
-    let badgeNumber = 1;
 
     // Generate Admins
     for (let i = 0; i < 10; i++) {
@@ -128,10 +128,12 @@ async function main() {
         // Add Evidence
         await prisma.evidence.create({
             data: {
+                title: faker.lorem.sentence(),
                 crimeId: crime.crimeId,
-                evidenceType: faker.word.noun(),
                 description: faker.lorem.sentence(),
-                submittedBy: faker.helpers.arrayElement(users).userId,
+                submitedBy: faker.helpers.arrayElement(users).userId, // Updated field
+                mime: faker.system.mimeType(),
+                filename: faker.system.fileName(),
             },
         });
 

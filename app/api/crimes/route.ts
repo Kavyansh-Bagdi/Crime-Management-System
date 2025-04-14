@@ -6,7 +6,7 @@ import { z } from "zod";
 
 
 const evidenceSchema = z.object({
-    evidenceType: z.string().min(1),
+    title: z.string().min(1),
     description: z.string().optional(),
     img: z
         .string()
@@ -15,6 +15,9 @@ const evidenceSchema = z.object({
             (val) => val === null || val.startsWith("data:image/"),
             { message: "Invalid image format" }
         ),
+    mime: z.string().optional(),
+    filename: z.string().optional(),
+    submitedBy: z.number().optional(), // Made optional
 });
 
 
@@ -121,17 +124,19 @@ export async function POST(req: Request) {
             },
         });
 
-
+        // Save evidence with image blob in the same table
         if (evidence.length > 0) {
             await Promise.all(
                 evidence.map((ev) =>
                     prisma.evidence.create({
                         data: {
+                            title: ev.title, // Ensure `title` is included
                             crimeId: newCrime.crimeId,
-                            evidenceType: ev.evidenceType,
                             description: ev.description || "",
-                            img: ev.img ? Buffer.from(ev.img.split(",")[1], "base64") : undefined,
-                            submittedBy: Number(session.user.id),
+                            img: ev.img ? Buffer.from(ev.img.split(",")[1], "base64") : undefined, // Decode base64
+                            mime: ev.mime || "image/jpeg",
+                            filename: ev.filename || "evidence.jpg",
+                            submitedBy: Number(session.user.id),
                         },
                     })
                 )

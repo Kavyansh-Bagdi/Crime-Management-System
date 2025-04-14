@@ -1,30 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/script";
+import { getServerSession } from "next-auth/next"; // Import getServerSession
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-export async function GET(
-    req: NextRequest,
-    context: { params: { crimeId: string } }
-) {
+export async function GET(req: NextRequest) {
     try {
-        const { params } = await context; // Await context.params
-        const crimeId = params.crimeId;
+        const url = new URL(req.url);
+        const crimeId = parseInt(url.pathname.split("/").pop() || "");
 
-        if (!crimeId || isNaN(Number(crimeId))) {
+        if (isNaN(crimeId)) {
             return NextResponse.json({ error: "Invalid or missing crimeId" }, { status: 400 });
         }
 
-        const parsedCrimeId = parseInt(crimeId, 10);
-
         const crime = await prisma.crime.findUnique({
-            where: { crimeId: parsedCrimeId },
+            where: { crimeId },
             include: {
-                Evidence: true,
-                victim: true,
-                accused: true,
-                user: true, // reported by
-                administrative: true, // related user
+                victim: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        userId: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
+                accused: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        userId: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
+                user: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        userId: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
+                administrative: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        userId: true,
+                        email: true,
+                        phoneNumber: true,
+                        administrative: {
+                            select: {
+                                designation: true,
+                                badgeNumber: true,
+                                department: true,
+                            }
+                        }
+                    }
+                },
                 location: true,
-                crimeLogs: { // Fixed relation name
+                crimeLogs: {
                     include: {
                         user: true,
                     },
@@ -45,11 +80,10 @@ export async function GET(
             status: crime.status,
             location: crime.location,
             reportedBy: crime.user,
-            administrative: crime.administrative,
+            administrative: crime.administrative || null,
             victim: crime.victim,
             accused: crime.accused,
-            Evidence: crime.Evidence,
-            crimeLogs: crime.crimeLogs, // Updated response key
+            crimeLogs: crime.crimeLogs,
         });
     } catch (error) {
         console.error("Error fetching crime details:", error);
@@ -57,60 +91,74 @@ export async function GET(
     }
 }
 
-export async function PATCH(
-    req: NextRequest,
-    context: { params: { crimeId: string } }
-) {
+export async function POST(req: NextRequest) {
+    const url = new URL(req.url);
+    const crimeId = parseInt(url.pathname.split("/").pop() || "");
+
+    const session = await getServerSession(authOptions); // Use getServerSession with authOptions
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!session.user) {
+        return NextResponse.json({ error: "User not found" }, { status: 401 }); // Ensure user is present in session
+    }
+
+    if (isNaN(crimeId)) {
+        return NextResponse.json({ error: "Invalid or missing crimeId" }, { status: 400 });
+    }
+
     try {
-        const { params } = context;
-        const crimeId = parseInt(params.crimeId, 10);
-
-        if (isNaN(crimeId)) {
-            return NextResponse.json({ error: "Invalid crimeId" }, { status: 400 });
-        }
-
         const body = await req.json();
-        const { role, updates } = body;
+        const { evidenceUpdates = [], deleteEvidenceIds = [] } = body;
 
-        if (!["Admin", "Administrative"].includes(role)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        // Validate crime existence
+        const crime = await prisma.crime.findUnique({ where: { crimeId } });
+        if (!crime) {
+            return NextResponse.json({ error: "Crime not found" }, { status: 404 });
         }
 
-        const updateData: any = {};
-
-        if (updates.status) {
-            updateData.status = updates.status;
-        }
-
-        if (updates.evidence) {
-            await prisma.evidence.createMany({
-                data: updates.evidence.map((e: any) => ({
-                    crimeId,
-                    description: e.description,
-                })),
-            });
-        }
-
-        if (updates.caseLog) {
-            await prisma.crimeLog.create({
-                data: {
-                    crimeId,
-                    update: updates.caseLog.message,
-                    userId: updates.caseLog.userId,
+        // Delete evidence if specified
+        if (deleteEvidenceIds.length > 0) {
+            await prisma.evidence.deleteMany({
+                where: {
+                    evidenceId: { in: deleteEvidenceIds },
                 },
             });
         }
 
-        if (Object.keys(updateData).length > 0) {
-            await prisma.crime.update({
-                where: { crimeId },
-                data: updateData,
-            });
-        }
+        // Update or create evidence
+        await Promise.all(
+            evidenceUpdates.map((ev) =>
+                ev.evidenceId
+                    ? prisma.evidence.update({
+                        where: { evidenceId: ev.evidenceId },
+                        data: {
+                            title: ev.title,
+                            description: ev.description,
+                            img: ev.img ? Buffer.from(ev.img.split(",")[1], "base64") : undefined, // Decode base64
+                            mime: ev.mime || undefined, // Update mime only if provided
+                            filename: ev.filename || undefined, // Update filename only if provided
+                            submitedBy: ev.submitedBy, // Ensure submitedBy is included
+                        },
+                    })
+                    : prisma.evidence.create({
+                        data: {
+                            crimeId,
+                            title: ev.title,
+                            description: ev.description,
+                            img: ev.img ? Buffer.from(ev.img.split(",")[1], "base64") : undefined, // Decode base64
+                            mime: ev.mime,
+                            filename: ev.filename,
+                            submitedBy: session.user.id,
+                        },
+                    })
+            )
+        );
 
-        return NextResponse.json({ message: "Crime updated successfully" });
+        return NextResponse.json({ success: true, message: "Evidence managed successfully" }, { status: 200 });
     } catch (error) {
-        console.error("Error updating crime:", error);
+        console.error("Error managing evidence:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
