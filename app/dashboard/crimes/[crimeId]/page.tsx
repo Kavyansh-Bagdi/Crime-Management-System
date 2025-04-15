@@ -318,144 +318,147 @@ export default function CrimeDetailsPage() {
                             isCivilian={isCivilian}
                         />
 
-                        <div>
-                            <label className="block font-bold mb-2">Accused</label>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {formData.accused.map((accused: any) => (
-                                        <Card key={accused.userId} className="p-4">
-                                            <CardContent>
-                                                <p>{`${accused.firstName} ${accused.lastName || ""}`.trim()}</p>
-                                                <p>Email: {accused.email || "N/A"}</p>
-                                                <p>Phone: {accused.phoneNumber || "N/A"}</p>
-                                                {(role === "Admin" || role === "Administrative") && (
-                                                    <div className="flex justify-end">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            onClick={() => handleRemoveUser(accused.userId, "accused")}
-                                                        >
-                                                            <IconTrash size={18} stroke={2} />
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-
-                                <div>
-                                    {role === "Admin" || role === "Administrative" ? (
-                                        <div className="space-y-4">
-                                            <UserSearchInput
-                                                label="Accused"
-                                                query={accusedQuery}
-                                                setQuery={setAccusedQuery}
-                                                suggestions={accusedSuggestions}
-                                                onSelect={(user) => handleAddUser(user, "accused")}
-                                            />
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block font-bold mb-2">Victims</label>
-                            <div className="space-y-4">
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {formData.victims.map((victim: any) => (
-                                        <Card key={victim.userId} className="p-4">
-                                            <CardContent>
-                                                <p>{`${victim.firstName} ${victim.lastName || ""}`.trim()}</p>
-                                                <p>Email: {victim.email || "N/A"}</p>
-                                                <p>Phone: {victim.phoneNumber || "N/A"}</p>
-                                                {(role === "Admin" || role === "Administrative") && (
-                                                    <div className="flex justify-end">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            onClick={() => handleRemoveUser(victim.userId, "victims")}
-                                                        >
-                                                            <IconTrash size={18} stroke={2} />
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-
-                                <div>
-                                    {role === "Admin" || role === "Administrative" ? (
-                                        <div className="space-y-4">
-                                            <UserSearchInput
-                                                label="Victim"
-                                                query={victimQuery}
-                                                setQuery={setVictimQuery}
-                                                suggestions={victimSuggestions}
-                                                onSelect={(user) => handleAddUser(user, "victims")}
-                                            />
-                                        </div>
-                                    ) : null}
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block font-bold mb-2">Administrative</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {formData.administrative ? (
-                                    <Card className="p-4">
-                                        <CardContent>
-                                            <p className="font-bold text-lg">{`${formData.administrative.firstName} ${formData.administrative.lastName || ""}`.trim()}</p>
-                                            <p className="text-sm text-gray-600">Email: <span className="text-gray-800">{formData.administrative.email || "N/A"}</span></p>
-                                            <p className="text-sm text-gray-600">Phone: <span className="text-gray-800">{formData.administrative.phoneNumber || "N/A"}</span></p>
-                                            {formData.administrative.administrative && (
-                                                <>
-                                                    <p className="text-sm text-gray-600">Designation: <span className="text-gray-800">{formData.administrative.administrative.designation || "N/A"}</span></p>
-                                                    <p className="text-sm text-gray-600">Badge Number: <span className="text-gray-800">{formData.administrative.administrative.badgeNumber || "N/A"}</span></p>
-                                                    <p className="text-sm text-gray-600">Department: <span className="text-gray-800">{formData.administrative.administrative.department || "N/A"}</span></p>
-                                                </>
-                                            )}
-                                            {role === "Admin" && (
-                                                <div className="flex justify-end mt-4">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => {
-                                                            setFormData(prev => ({ ...prev, administrative: null }));
-                                                            toast.success("Administrative officer removed");
-                                                        }}
-                                                    >
-                                                        <IconTrash size={18} stroke={2} />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                ) : (
+                        <div className="flex flex-wrap gap-4">
+                            <div className="flex-1 min-w-[300px]">
+                                <label className="block font-bold mb-2">Accused</label>
+                                <div className="space-y-4">
                                     <div>
-                                        {role === "Admin" && (
+                                        {formData.accused.map((accused: any) => (
+                                            <Card key={accused.userId} className="p-4 m-2">
+                                                <CardContent>
+                                                    <p>{`${accused.firstName} ${accused.lastName || ""}`.trim()}</p>
+                                                    <p>Email: {accused.email || "N/A"}</p>
+                                                    <p>Phone: {accused.phoneNumber || "N/A"}</p>
+                                                    {(role === "Admin" || role === "Administrative") && (
+                                                        <div className="flex justify-end">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                onClick={() => handleRemoveUser(accused.userId, "accused")}
+                                                            >
+                                                                <IconTrash size={18} stroke={2} />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+
+                                    <div>
+                                        {role === "Admin" || role === "Administrative" ? (
                                             <div className="space-y-4">
                                                 <UserSearchInput
-                                                    label="Administrative Officer"
-                                                    query={administrativeQuery}
-                                                    setQuery={setAdministrativeQuery}
-                                                    suggestions={administrativeSuggestions}
-                                                    onSelect={handleAssignAdministrative}
+                                                    label="Accused"
+                                                    query={accusedQuery}
+                                                    setQuery={setAccusedQuery}
+                                                    suggestions={accusedSuggestions}
+                                                    onSelect={(user) => handleAddUser(user, "accused")}
                                                 />
                                             </div>
-                                        )}
-                                        {role !== "Admin" && (
-                                            <p>No administrative officer is assigned to this case.</p>
-                                        )}
+                                        ) : null}
                                     </div>
-                                )}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 min-w-[300px]">
+                                <label className="block font-bold mb-2">Victims</label>
+                                <div className="space-y-4">
+
+                                    <div>
+                                        {formData.victims.map((victim: any) => (
+                                            <Card key={victim.userId} className="p-4 m-2">
+                                                <CardContent>
+                                                    <p>{`${victim.firstName} ${victim.lastName || ""}`.trim()}</p>
+                                                    <p>Email: {victim.email || "N/A"}</p>
+                                                    <p>Phone: {victim.phoneNumber || "N/A"}</p>
+                                                    {(role === "Admin" || role === "Administrative") && (
+                                                        <div className="flex justify-end">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                onClick={() => handleRemoveUser(victim.userId, "victims")}
+                                                            >
+                                                                <IconTrash size={18} stroke={2} />
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+
+                                    <div>
+                                        {role === "Admin" || role === "Administrative" ? (
+                                            <div className="space-y-4">
+                                                <UserSearchInput
+                                                    label="Victim"
+                                                    query={victimQuery}
+                                                    setQuery={setVictimQuery}
+                                                    suggestions={victimSuggestions}
+                                                    onSelect={(user) => handleAddUser(user, "victims")}
+                                                />
+                                            </div>
+                                        ) : null}
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 min-w-[300px]">
+                                <label className="block font-bold mb-2">Administrative</label>
+                                <div className="space-y-4">
+                                    {formData.administrative ? (
+                                        <Card className="p-4 m-2">
+                                            <CardContent>
+                                                <p className="font-bold text-lg">{`${formData.administrative.firstName} ${formData.administrative.lastName || ""}`.trim()}</p>
+                                                <p>Email: <span>{formData.administrative.email || "N/A"}</span></p>
+                                                <p>Phone: <span>{formData.administrative.phoneNumber || "N/A"}</span></p>
+                                                {formData.administrative.administrative && (
+                                                    <>
+                                                        <p>Designation: <span>{formData.administrative.administrative.designation || "N/A"}</span></p>
+                                                        <p>Badge Number: <span>{formData.administrative.administrative.badgeNumber || "N/A"}</span></p>
+                                                        <p>Department: <span>{formData.administrative.administrative.department || "N/A"}</span></p>
+                                                    </>
+                                                )}
+                                                {role === "Admin" && (
+                                                    <div className="flex justify-end mt-4">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, administrative: null }));
+                                                                toast.success("Administrative officer removed");
+                                                            }}
+                                                        >
+                                                            <IconTrash size={18} stroke={2} />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ) : (
+                                        <div>
+                                            {role === "Admin" && (
+                                                <div className="space-y-4">
+                                                    <UserSearchInput
+                                                        label="Administrative Officer"
+                                                        query={administrativeQuery}
+                                                        setQuery={setAdministrativeQuery}
+                                                        suggestions={administrativeSuggestions}
+                                                        onSelect={handleAssignAdministrative}
+                                                    />
+                                                </div>
+                                            )}
+                                            {role !== "Admin" && (
+                                                <p>No administrative officer is assigned to this case.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+
 
                         {(role === "Admin" || role === "Administrative") && (
                             <Button onClick={handleUpdateCrime}>Update Crime</Button>
