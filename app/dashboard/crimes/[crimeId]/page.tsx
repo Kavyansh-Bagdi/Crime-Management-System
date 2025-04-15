@@ -1,5 +1,5 @@
 'use client';
-
+// abhinav's work
 import { IconTrash } from "@tabler/icons-react"
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -187,30 +187,66 @@ export default function CrimeDetailsPage() {
         }
     };
 
+    // ...existing code...
     const handleUpdateCrime = async () => {
         try {
-            const response = await fetch(`/api/crimes/${crimeId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    role,
-                    updates: {
-                        ...formData,
-                        dateOccurred: dateOccurred?.toISOString(),
-                        caseLog: {
-                            message: `Crime details updated by ${session?.user?.name || "Unknown User"}`,
-                            userId: session?.user?.id,
-                        },
-                    },
-                }),
+            const crimeResponse = await fetch(`/api/crimes/${crimeId}`);
+            if (!crimeResponse.ok) throw new Error("Failed to refresh crime data");
+
+            const updatedCrimeRaw = await crimeResponse.json();
+
+            // Deep clone to remove any proxy references (XrayWrapper)
+            const updatedCrime = JSON.parse(JSON.stringify(updatedCrimeRaw));
+
+            const {
+                title = "",
+                crimeType = "",
+                status = "",
+                description = "",
+                dateOccurred = "",
+                location = {},
+                accused = [],
+                victim = [],
+                administrative = null,
+            } = updatedCrime;
+
+            setCrime(updatedCrime);
+
+            setFormData({
+                title,
+                crimeType,
+                status,
+                description,
+                dateOccurred: dateOccurred
+                    ? new Date(dateOccurred).toISOString().slice(0, 16)
+                    : "",
+                location: {
+                    city: location?.city || "",
+                    state: location?.state || "",
+                    country: location?.country || "",
+                },
+                accused: Array.isArray(accused) ? accused.map((a: any) => ({ ...a })) : [],
+                victims: Array.isArray(victim) ? victim.map((v: any) => ({ ...v })) : [],
+                administrative: administrative
+                    ? {
+                        ...administrative,
+                        administrative: administrative.administrative
+                            ? { ...administrative.administrative }
+                            : null,
+                    }
+                    : null,
             });
 
-            if (!response.ok) throw new Error("Failed to update crime details");
-            toast.success("Crime details updated successfully");
-        } catch (error) {
-            toast.error("Failed to update crime details. Please try again.");
+            if (dateOccurred) {
+                setDateOccurred(new Date(dateOccurred));
+            }
+        } catch (error: any) {
+            console.error("Error in handleUpdateCrime:", error);
+            toast.error(error.message || "Failed to update crime details");
         }
     };
+
+    // ...existing code...
 
     const resetEvidenceForm = () => {
         setDialogOpen(false);
@@ -439,6 +475,13 @@ export default function CrimeDetailsPage() {
                                         </Card>
                                     ) : (
                                         <div>
+
+                                            <Card className="p-4 m-2">
+                                                <CardContent>
+                                                    <p>No administrative officer is assigned to this case.</p>
+                                                </CardContent>
+                                            </Card>
+
                                             {role === "Admin" && (
                                                 <div className="space-y-4">
                                                     <UserSearchInput
@@ -449,9 +492,6 @@ export default function CrimeDetailsPage() {
                                                         onSelect={handleAssignAdministrative}
                                                     />
                                                 </div>
-                                            )}
-                                            {role !== "Admin" && (
-                                                <p>No administrative officer is assigned to this case.</p>
                                             )}
                                         </div>
                                     )}
