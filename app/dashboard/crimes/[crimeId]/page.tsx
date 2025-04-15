@@ -1,5 +1,6 @@
 'use client';
 // abhinav's work
+import { Evidence } from "@prisma/client";
 import { IconTrash } from "@tabler/icons-react"
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -32,7 +33,17 @@ export default function CrimeDetailsPage() {
         victims: [],
         administrative: null,
     });
-    const [newEvidence, setNewEvidence] = useState({ title: "", description: "", img: null });
+    const [newEvidence, setNewEvidence] = useState<Evidence>({
+        crimeId: 0, // Default value, replace as needed
+        evidenceId: 0, // Default value, replace as needed
+        title: "",
+        description: "",
+        img: null,
+        mime: "",
+        filename: "",
+        createdAt: new Date(), // Default to current129 date
+        submitedBy: session?.user?.id || null,
+    });
     const [evidenceList, setEvidenceList] = useState<any[]>([]);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [currentFile, setCurrentFile] = useState<File | null>(null);

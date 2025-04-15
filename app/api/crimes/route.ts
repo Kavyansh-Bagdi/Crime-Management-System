@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import authOptions from "@/lib/auth/authOptions";
 import prisma from "@/prisma/script";
 import { z } from "zod";
 
@@ -19,7 +19,7 @@ const evidenceSchema = z.object({
 });
 
 const crimeSchema = z.object({
-    title: z.string().optional(),
+    title: z.string().min(1),
     crimeType: z.string().min(1),
     description: z.string().optional(),
     dateOccurred: z.string().refine((val) => !isNaN(Date.parse(val)), {
