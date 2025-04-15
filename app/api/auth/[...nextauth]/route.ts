@@ -1,6 +1,5 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { NextAuthOptions } from "next-auth";
 import prisma from "@/prisma/script";
 import bcrypt from "bcryptjs";
 
@@ -17,27 +16,22 @@ export const authOptions: NextAuthOptions = {
                     placeholder: "Civilian | Admin | Administrative",
                 },
             },
-            async authorize(credentials: { email: string; password: string; role: string }) {
-                const { email, password, role } = credentials || {};
+            async authorize(credentials) {
+                const { email, password, role } = credentials ?? {};
                 if (!email || !password || !role) {
-                    throw new Error("Missing required fields: email, password, or role.");
+                    throw new Error("Missing required fields.");
                 }
 
                 const user = await prisma.user.findUnique({
                     where: { email },
                 });
-                if (!user) {
-                    throw new Error("User not found.");
-                }
 
-                const passwordMatch = await bcrypt.compare(password, user.password);
-                if (!passwordMatch) {
-                    throw new Error("Invalid password.");
-                }
+                if (!user) throw new Error("User not found.");
 
-                if (user.role !== role) {
-                    throw new Error("Invalid role.");
-                }
+                const isPasswordValid = await bcrypt.compare(password, user.password);
+                if (!isPasswordValid) throw new Error("Invalid password.");
+
+                if (user.role !== role) throw new Error("Invalid role.");
 
                 return {
                     id: user.userId,
@@ -74,10 +68,10 @@ export const authOptions: NextAuthOptions = {
         },
         async session({ session, token }) {
             if (session.user) {
-                session.user.id = token.id as string;
-                session.user.name = token.name;
-                session.user.email = token.email;
-                session.user.role = token.role;
+                session.user.id = token.id as number;
+                session.user.name = token.name as string;
+                session.user.email = token.email as string;
+                session.user.role = token.role as string;
             }
             return session;
         },

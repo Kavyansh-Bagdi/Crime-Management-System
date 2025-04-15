@@ -7,13 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogTrigger, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
 const UserSearchInput = ({
     label,
     query,
@@ -57,6 +55,7 @@ const UserSearchInput = ({
 
 export default function CrimeDetailsPage() {
     const { data: session } = useSession();
+    const isCivilian = (session?.user?.role || "") == "Civilian";
     const rawParams = useParams();
     const crimeId = Array.isArray(rawParams.crimeId) ? rawParams.crimeId[0] : rawParams.crimeId;
 
@@ -259,7 +258,7 @@ export default function CrimeDetailsPage() {
     };
 
     useEffect(() => {
-        const timeout = setTimeout(() => fetchAdministrativeSuggestions(searchQuery), 300); // Debounce API calls
+        const timeout = setTimeout(() => fetchAdministrativeSuggestions(searchQuery), 300);
         return () => clearTimeout(timeout);
     }, [searchQuery]);
 
@@ -268,8 +267,8 @@ export default function CrimeDetailsPage() {
             ...prev,
             administrative: user,
         }));
-        setSearchQuery(""); // Clear search input
-        setAdministrativeSuggestions([]); // Clear suggestions
+        setSearchQuery("");
+        setAdministrativeSuggestions([]);
         toast.success(`Assigned ${user.name} as administrative.`);
     };
 
@@ -289,6 +288,7 @@ export default function CrimeDetailsPage() {
                             <div className='flex-1'>
                                 <label className="block font-bold mb-2">Type</label>
                                 <Select
+                                    disabled={isCivilian}
                                     value={formData.crimeType} // Default value from API
                                     onValueChange={(value) => setFormData({ ...formData, crimeType: value })}
                                 >
@@ -311,6 +311,7 @@ export default function CrimeDetailsPage() {
                             <div className='flex-1'>
                                 <label className="block font-bold mb-2">Status</label>
                                 <Select
+                                    disabled={isCivilian}
                                     value={formData.status} // Default value from API
                                     onValueChange={(value) => setFormData({ ...formData, status: value })}
                                 >
@@ -330,6 +331,7 @@ export default function CrimeDetailsPage() {
                             <div className='flex-1'>
                                 <label className="block font-bold mb-2">Date Occurred</label>
                                 <Input
+                                    disabled={isCivilian}
                                     type="datetime-local"
                                     className="w-full"
                                     value={formData.dateOccurred}
@@ -340,6 +342,7 @@ export default function CrimeDetailsPage() {
                         <div>
                             <label className="block font-bold mb-2">Description</label>
                             <Textarea
+                                disabled={isCivilian}
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             />
@@ -393,11 +396,12 @@ export default function CrimeDetailsPage() {
                                     </Card>
                                 ) : (
                                     <div>
-                                        <p className="text-gray-500">No administrative is assigned to this case.</p>
-                                        {role === "Admin" && (
+
+                                        {role === "Admin" ? (
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <Input
+                                                        disabled={isCivilian}
                                                         placeholder="Search administrative..."
                                                         value={searchQuery}
                                                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -414,7 +418,7 @@ export default function CrimeDetailsPage() {
                                                     />
                                                 </PopoverContent>
                                             </Popover>
-                                        )}
+                                        ) : <p>No administrative is assigned to this case.</p>}
                                     </div>
                                 )}
                             </div>
@@ -468,6 +472,7 @@ export default function CrimeDetailsPage() {
                                     </DialogHeader>
                                     <div className="space-y-4">
                                         <Input
+                                            disabled={isCivilian}
                                             name="title"
                                             placeholder="Evidence Type"
                                             value={newEvidence.title}
@@ -480,7 +485,7 @@ export default function CrimeDetailsPage() {
                                             onChange={handleEvidenceDetailsChange}
                                         />
                                         {editingEvidenceIndex === null && (
-                                            <Input type="file" accept="image/*" onChange={handleFileChange} />
+                                            <Input disabled={isCivilian} type="file" accept="image/*" onChange={handleFileChange} />
                                         )}
                                     </div>
                                     <DialogFooter>
@@ -512,6 +517,7 @@ export default function CrimeDetailsPage() {
                                     />
                                     <div>
                                         <Input
+                                            disabled={isCivilian}
                                             name="title"
                                             placeholder="Evidence Type"
                                             value={selectedEvidence.title}
@@ -535,6 +541,7 @@ export default function CrimeDetailsPage() {
                                             className="mt-4"
                                         />
                                         <Input
+
                                             readOnly
                                             value={selectedEvidence.filename}
                                             placeholder="Filename"
@@ -542,7 +549,7 @@ export default function CrimeDetailsPage() {
                                         />
                                         <Input
                                             readOnly
-                                            value={selectedEvidence.submitedByName || "Unknown User"} // Updated field
+                                            value={selectedEvidence.submitedByName || "Unknown User"}
                                             placeholder="Submitted By"
                                             className="cursor-not-allowed mt-4"
                                         />
@@ -573,7 +580,6 @@ export default function CrimeDetailsPage() {
 
                                                 toast.success("Evidence updated successfully");
 
-                                                // Refresh evidence list
                                                 const updatedEvidenceList = await fetch(`/api/evidence?crimeId=${crimeId}`).then((res) =>
                                                     res.json()
                                                 );
