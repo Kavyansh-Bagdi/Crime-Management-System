@@ -1,71 +1,18 @@
 'use client';
 
-import {
-    IconTrash
-} from "@tabler/icons-react"
-
+import { IconTrash } from "@tabler/icons-react"
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { UserSearchInput } from "@/components/crimeDetails/UserSearchInput";
+import { CrimeBasicDetails } from "@/components/crimeDetails/CrimeBasicDetails";
 import { Dialog, DialogTrigger, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-
-const UserSearchInput = ({
-    label,
-    query,
-    setQuery,
-    suggestions,
-    onSelect,
-}: {
-    label: string;
-    query: string;
-    setQuery: (value: string) => void;
-    suggestions: any[];
-    onSelect: (user: { userId: number; firstName: string, lastName: string, email: string, phoneNumber: string }) => void;
-}) => (
-    <div className="grid gap-2 relative">
-        <Label>{label}</Label>
-        <Input
-            placeholder={`Search for ${label.toLowerCase()} by name or email`}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-        />
-        {suggestions.length > 0 && (
-            <ul className="absolute z-10 top-full mt-1 w-full bg-accent border rounded shadow">
-                {suggestions.map((user) => (
-                    <li
-                        key={user.userId}
-                        className="px-3 py-2 hover:bg-background cursor-pointer text-sm"
-                        onClick={() =>
-                            onSelect({
-                                userId: user.userId,
-                                firstName: user.firstName,
-                                lastName: user.lastName,
-                                email: user.email,
-                                phoneNumber: user.phoneNumber,
-                            })
-                        }
-                    >
-                        {user.firstName} {user.lastName} — {user.email}
-                    </li>
-                ))}
-            </ul>
-        )}
-    </div>
-);
-
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 export default function CrimeDetailsPage() {
     const { data: session } = useSession();
     const isCivilian = (session?.user?.role || "") == "Civilian";
@@ -363,90 +310,13 @@ export default function CrimeDetailsPage() {
                 </CardHeader>
                 <CardContent>
                     <form className="space-y-4">
-                        <div className='flex w-full justify-evenly gap-4'>
-                            <div className='flex-1'>
-                                <label className="block font-bold mb-2">Type</label>
-                                <Select
-                                    disabled={isCivilian}
-                                    value={formData.crimeType} // Default value from API
-                                    onValueChange={(value) => setFormData({ ...formData, crimeType: value })}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={formData.crimeType || "Select Crime Type"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Burglary">Burglary</SelectItem>
-                                        <SelectItem value="Assault">Assault</SelectItem>
-                                        <SelectItem value="Fraud">Fraud</SelectItem>
-                                        <SelectItem value="Robbery">Robbery</SelectItem>
-                                        <SelectItem value="Arson">Arson</SelectItem>
-                                        <SelectItem value="Theft">Theft</SelectItem>
-                                        <SelectItem value="Vandalism">Vandalism</SelectItem>
-                                        <SelectItem value="Homicide">Homicide</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className='flex-1'>
-                                <label className="block font-bold mb-2">Status</label>
-                                <Select
-                                    disabled={isCivilian}
-                                    value={formData.status} // Default value from API
-                                    onValueChange={(value) => setFormData({ ...formData, status: value })}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={formData.status || "Select Status"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Accepted">Accepted</SelectItem>
-                                        <SelectItem value="Rejected">Rejected</SelectItem>
-                                        <SelectItem value="Reported">Reported</SelectItem>
-                                        <SelectItem value="Investigation">Investigation</SelectItem>
-                                        <SelectItem value="Closed">Closed</SelectItem>
-                                        <SelectItem value="Pending">Pending</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className='flex-1'>
-                                <label className="block font-bold mb-2">Date Occurred</label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal",
-                                                !dateOccurred && "text-muted-foreground"
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {dateOccurred ? format(dateOccurred, "PPP") : "Pick a date"}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={dateOccurred}
-                                            onSelect={(date) => {
-                                                setDateOccurred(date);
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    dateOccurred: date ? date.toISOString().slice(0, 16) : "",
-                                                }));
-                                            }}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block font-bold mb-2">Description</label>
-                            <Textarea
-                                disabled={isCivilian}
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            />
-                        </div>
+                        <CrimeBasicDetails
+                            formData={formData}
+                            setFormData={setFormData}
+                            dateOccurred={dateOccurred}
+                            setDateOccurred={setDateOccurred}
+                            isCivilian={isCivilian}
+                        />
 
                         <div>
                             <label className="block font-bold mb-2">Accused</label>
