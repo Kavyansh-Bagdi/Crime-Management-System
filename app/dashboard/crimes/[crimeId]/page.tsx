@@ -1,5 +1,9 @@
 'use client';
 
+import {
+    IconTrash
+} from "@tabler/icons-react"
+
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -12,6 +16,12 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
 const UserSearchInput = ({
     label,
     query,
@@ -23,25 +33,28 @@ const UserSearchInput = ({
     query: string;
     setQuery: (value: string) => void;
     suggestions: any[];
-    onSelect: (user: { userId: string; name: string }) => void;
+    onSelect: (user: { userId: number; firstName: string, lastName: string, email: string, phoneNumber: string }) => void;
 }) => (
     <div className="grid gap-2 relative">
-        <label className="block font-bold mb-2">{label}</label>
+        <Label>{label}</Label>
         <Input
             placeholder={`Search for ${label.toLowerCase()} by name or email`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
         />
         {suggestions.length > 0 && (
-            <ul className="absolute z-10 top-full mt-1 w-full bg-white border rounded shadow">
+            <ul className="absolute z-10 top-full mt-1 w-full bg-accent border rounded shadow">
                 {suggestions.map((user) => (
                     <li
                         key={user.userId}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        className="px-3 py-2 hover:bg-background cursor-pointer text-sm"
                         onClick={() =>
                             onSelect({
                                 userId: user.userId,
-                                name: `${user.firstName} ${user.lastName || ""} (${user.email})`,
+                                firstName: user.firstName,
+                                lastName: user.lastName,
+                                email: user.email,
+                                phoneNumber: user.phoneNumber,
                             })
                         }
                     >
@@ -79,9 +92,19 @@ export default function CrimeDetailsPage() {
     const [editingEvidenceIndex, setEditingEvidenceIndex] = useState<number | null>(null);
     const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState(""); // State for search input
-    const [administrativeSuggestions, setAdministrativeSuggestions] = useState<any[]>([]); // State for suggestions
+
+    const [accusedQuery, setAccusedQuery] = useState("");
+    const [accusedSuggestions, setAccusedSuggestions] = useState<any[]>([]);
+    const [victimQuery, setVictimQuery] = useState("");
+    const [victimSuggestions, setVictimSuggestions] = useState<any[]>([]);
+    const [administrativeQuery, setAdministrativeQuery] = useState("");
+    const [administrativeSuggestions, setAdministrativeSuggestions] = useState<any[]>([]);
 
     const role = session?.user?.role || "User";
+
+    const [dateOccurred, setDateOccurred] = useState<Date | undefined>(
+        formData.dateOccurred ? new Date(formData.dateOccurred) : undefined
+    );
 
     useEffect(() => {
         async function fetchCrimeDetails() {
@@ -118,6 +141,10 @@ export default function CrimeDetailsPage() {
                     victims: crimeData.victim || [], // Map 'victim' key to 'victims'
                     administrative: crimeData.administrative || null, // Include administrative field
                 });
+
+                // Ensure the date is set in the `dateOccurred` state
+                setDateOccurred(crimeData.dateOccurred ? new Date(crimeData.dateOccurred) : undefined);
+
                 setEvidenceList(evidenceData || []);
             } catch (error) {
                 console.error("Error fetching crime details:", error);
@@ -222,6 +249,7 @@ export default function CrimeDetailsPage() {
                     role,
                     updates: {
                         ...formData,
+                        dateOccurred: dateOccurred?.toISOString(),
                         caseLog: {
                             message: `Crime details updated by ${session?.user?.name || "Unknown User"}`,
                             userId: session?.user?.id,
@@ -258,18 +286,69 @@ export default function CrimeDetailsPage() {
     };
 
     useEffect(() => {
-        const timeout = setTimeout(() => fetchAdministrativeSuggestions(searchQuery), 300);
+        const timeout = setTimeout(() => fetchAdministrativeSuggestions(administrativeQuery), 300);
         return () => clearTimeout(timeout);
-    }, [searchQuery]);
+    }, [administrativeQuery]);
 
-    const handleAssignAdministrative = (user: { userId: string; name: string }) => {
+    const handleAssignAdministrative = (user: any) => {
         setFormData((prev) => ({
             ...prev,
             administrative: user,
         }));
-        setSearchQuery("");
+        setAdministrativeQuery("");
         setAdministrativeSuggestions([]);
-        toast.success(`Assigned ${user.name} as administrative.`);
+        toast.success(`Assigned ${user.firstName} ${user.lastName} as administrative.`);
+    };
+
+    const fetchUserSuggestions = async (query: string, setSuggestions: (val: any[]) => void) => {
+        if (query.length < 2) return setSuggestions([]);
+        try {
+            const res = await fetch(`/api/users?query=${query}`);
+            const data = await res.json();
+            setSuggestions(data.slice(0, 5));
+        } catch (err) {
+            console.error("User fetch error:", err);
+            setSuggestions([]);
+        }
+    };
+
+    useEffect(() => {
+        const timeout = setTimeout(() => fetchUserSuggestions(accusedQuery, setAccusedSuggestions), 300);
+        return () => clearTimeout(timeout);
+    }, [accusedQuery]);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => fetchUserSuggestions(victimQuery, setVictimSuggestions), 300);
+        return () => clearTimeout(timeout);
+    }, [victimQuery]);
+
+    const handleAddUser = (user: { id?: number; userId?: number; name?: string; firstName?: string; lastName?: string; email?: string; phoneNumber?: string }, type: "accused" | "victims") => {
+
+        if (formData[type].some((u: any) => u.userId === user.userId)) return;
+
+        setFormData((prev) => {
+            const updatedData = {
+                ...prev,
+                [type]: [...prev[type], user],
+            };
+            console.log(updatedData.accused, updatedData.victims);
+            return updatedData;
+        });
+
+        if (type === "accused") {
+            setAccusedQuery("");
+            setAccusedSuggestions([]);
+        } else {
+            setVictimQuery("");
+            setVictimSuggestions([]);
+        }
+    };
+
+    const handleRemoveUser = (userId: string, type: "accused" | "victims") => {
+        setFormData((prev) => ({
+            ...prev,
+            [type]: prev[type].filter((user: any) => user.userId !== userId),
+        }));
     };
 
     if (loading) return <p className="p-6">Loading...</p>;
@@ -330,13 +409,34 @@ export default function CrimeDetailsPage() {
                             </div>
                             <div className='flex-1'>
                                 <label className="block font-bold mb-2">Date Occurred</label>
-                                <Input
-                                    disabled={isCivilian}
-                                    type="datetime-local"
-                                    className="w-full"
-                                    value={formData.dateOccurred}
-                                    onChange={(e) => setFormData({ ...formData, dateOccurred: e.target.value })}
-                                />
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal",
+                                                !dateOccurred && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {dateOccurred ? format(dateOccurred, "PPP") : "Pick a date"}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={dateOccurred}
+                                            onSelect={(date) => {
+                                                setDateOccurred(date);
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    dateOccurred: date ? date.toISOString().slice(0, 16) : "",
+                                                }));
+                                            }}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                         <div>
@@ -350,32 +450,90 @@ export default function CrimeDetailsPage() {
 
                         <div>
                             <label className="block font-bold mb-2">Accused</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {formData.accused.map((accused: any) => (
-                                    <Card key={accused.userId} className="p-4">
-                                        <CardContent>
-                                            <p className='font-bold'>{`${accused.firstName} ${accused.lastName || ""}`.trim()}</p>
-                                            <p>Email: {accused.email || "N/A"}</p>
-                                            <p>Phone: {accused.phoneNumber || "N/A"}</p>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {formData.accused.map((accused: any) => (
+                                        <Card key={accused.userId} className="p-4">
+                                            <CardContent>
+                                                <p>{`${accused.firstName} ${accused.lastName || ""}`.trim()}</p>
+                                                <p>Email: {accused.email || "N/A"}</p>
+                                                <p>Phone: {accused.phoneNumber || "N/A"}</p>
+                                                {(role === "Admin" || role === "Administrative") && (
+                                                    <div className="flex justify-end">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => handleRemoveUser(accused.userId, "accused")}
+                                                        >
+                                                            <IconTrash size={18} stroke={2} />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                <div>
+                                    {role === "Admin" || role === "Administrative" ? (
+                                        <div className="space-y-4">
+                                            <UserSearchInput
+                                                label="Accused"
+                                                query={accusedQuery}
+                                                setQuery={setAccusedQuery}
+                                                suggestions={accusedSuggestions}
+                                                onSelect={(user) => handleAddUser(user, "accused")}
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
                             </div>
                         </div>
+
                         <div>
                             <label className="block font-bold mb-2">Victims</label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {formData.victims.map((victim: any) => (
-                                    <Card key={victim.userId} className="p-4">
-                                        <CardContent>
-                                            <p>{`${victim.firstName} ${victim.lastName || ""}`.trim()}</p>
-                                            <p>Email: {victim.email || "N/A"}</p>
-                                            <p>Phone: {victim.phoneNumber || "N/A"}</p>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                            <div className="space-y-4">
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {formData.victims.map((victim: any) => (
+                                        <Card key={victim.userId} className="p-4">
+                                            <CardContent>
+                                                <p>{`${victim.firstName} ${victim.lastName || ""}`.trim()}</p>
+                                                <p>Email: {victim.email || "N/A"}</p>
+                                                <p>Phone: {victim.phoneNumber || "N/A"}</p>
+                                                {(role === "Admin" || role === "Administrative") && (
+                                                    <div className="flex justify-end">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => handleRemoveUser(victim.userId, "victims")}
+                                                        >
+                                                            <IconTrash size={18} stroke={2} />
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                <div>
+                                    {role === "Admin" || role === "Administrative" ? (
+                                        <div className="space-y-4">
+                                            <UserSearchInput
+                                                label="Victim"
+                                                query={victimQuery}
+                                                setQuery={setVictimQuery}
+                                                suggestions={victimSuggestions}
+                                                onSelect={(user) => handleAddUser(user, "victims")}
+                                            />
+                                        </div>
+                                    ) : null}
+
+                                </div>
                             </div>
                         </div>
+
                         <div>
                             <label className="block font-bold mb-2">Administrative</label>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -392,33 +550,38 @@ export default function CrimeDetailsPage() {
                                                     <p className="text-sm text-gray-600">Department: <span className="text-gray-800">{formData.administrative.administrative.department || "N/A"}</span></p>
                                                 </>
                                             )}
+                                            {role === "Admin" && (
+                                                <div className="flex justify-end mt-4">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            setFormData(prev => ({ ...prev, administrative: null }));
+                                                            toast.success("Administrative officer removed");
+                                                        }}
+                                                    >
+                                                        <IconTrash size={18} stroke={2} />
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 ) : (
                                     <div>
-
-                                        {role === "Admin" ? (
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Input
-                                                        disabled={isCivilian}
-                                                        placeholder="Search administrative..."
-                                                        value={searchQuery}
-                                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                                        className="mt-4"
-                                                    />
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-full p-2">
-                                                    <UserSearchInput
-                                                        label="Administrative"
-                                                        query={searchQuery}
-                                                        setQuery={setSearchQuery}
-                                                        suggestions={administrativeSuggestions}
-                                                        onSelect={handleAssignAdministrative}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        ) : <p>No administrative is assigned to this case.</p>}
+                                        {role === "Admin" && (
+                                            <div className="space-y-4">
+                                                <UserSearchInput
+                                                    label="Administrative Officer"
+                                                    query={administrativeQuery}
+                                                    setQuery={setAdministrativeQuery}
+                                                    suggestions={administrativeSuggestions}
+                                                    onSelect={handleAssignAdministrative}
+                                                />
+                                            </div>
+                                        )}
+                                        {role !== "Admin" && (
+                                            <p>No administrative officer is assigned to this case.</p>
+                                        )}
                                     </div>
                                 )}
                             </div>

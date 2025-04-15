@@ -4,9 +4,7 @@ import * as React from "react"
 import {
   IconChartBar,
   IconDashboard,
-  IconFolder,
   IconInnerShadowTop,
-  IconListDetails,
   IconReport,
   IconUsers,
 } from "@tabler/icons-react"
