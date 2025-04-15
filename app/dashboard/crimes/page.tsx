@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation"; // Import useRouter
+import { useSession } from "next-auth/react";
 import {
     ColumnDef,
     flexRender,
@@ -11,6 +12,7 @@ import {
     getSortedRowModel,
     useReactTable,
     VisibilityState,
+    SortingState,
 } from "@tanstack/react-table";
 import {
     Table,
@@ -62,10 +64,11 @@ interface Crime {
 
 export default function CrimesPage() {
     const router = useRouter(); // Initialize useRouter
+    const { data: session } = useSession();
     const [crimes, setCrimes] = useState<Crime[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [globalFilter, setGlobalFilter] = useState("");
-    const [sorting, setSorting] = useState([]);
+    const [sorting, setSorting] = useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [recordsPerPage, setRecordsPerPage] = useState(10);
     const [pageIndex, setPageIndex] = useState(0);
@@ -76,7 +79,24 @@ export default function CrimesPage() {
                 const response = await fetch("/api/crimes");
                 if (!response.ok) throw new Error("Failed to fetch crimes");
                 const data = await response.json();
-                setCrimes(data);
+                
+                // Filter crimes based on user role
+                let filteredCrimes = data;
+                if (session?.user) {
+                    const userId = session.user.id;
+                    const userRole = session.user.role;
+                    
+                    if (userRole === "Civilian") {
+                        // Show only crimes reported by the civilian
+                        filteredCrimes = data.filter((crime: any) => crime.userId === userId);
+                    } else if (userRole === "Administrative") {
+                        // Show crimes assigned to the administrative officer
+                        filteredCrimes = data.filter((crime: any) => crime.administrative?.userId === userId);
+                    }
+                    // Admin can see all crimes, so no filtering needed
+                }
+                
+                setCrimes(filteredCrimes);
             } catch (error) {
                 console.error("Error fetching crimes:", error);
             } finally {
@@ -84,7 +104,7 @@ export default function CrimesPage() {
             }
         }
         fetchCrimes();
-    }, []);
+    }, [session]);
 
     const columns: ColumnDef<Crime>[] = [
         { accessorKey: "crimeId", header: "ID" },

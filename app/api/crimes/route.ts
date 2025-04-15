@@ -49,7 +49,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 
     const {
-        title,
+        title = "Untitled Crime Report",
         crimeType,
         description,
         dateOccurred,
@@ -139,10 +139,89 @@ export async function POST(req: Request): Promise<NextResponse> {
     }
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: Request): Promise<NextResponse> {
     try {
-        const crimes = await prisma.crime.findMany();
-        return NextResponse.json(crimes);
+        const session = await getServerSession(authOptions);
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const userId = session.user.id;
+        const userRole = session.user.role;
+
+        let whereClause = {};
+        if (userRole === "Civilian") {
+            // Show crimes where the user is either a victim or accused
+            whereClause = {
+                OR: [
+                    { victim: { some: { userId } } },
+                    { accused: { some: { userId } } }
+                ]
+            };
+        } else if (userRole === "Administrative") {
+            whereClause = { administrativeId: userId };
+        }
+        // Admin can see all crimes, so no where clause needed
+
+        const crimes = await prisma.crime.findMany({
+            where: whereClause,
+            include: {
+                user: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
+                administrative: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phoneNumber: true,
+                    }
+                },
+                victim: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                    }
+                },
+                accused: {
+                    select: {
+                        userId: true,
+                        firstName: true,
+                        lastName: true,
+                    }
+                },
+                location: true,
+            },
+            orderBy: {
+                dateOccurred: 'desc' // Order by most recent first
+            }
+        });
+
+        // Transform the data to match the expected format
+        const transformedCrimes = crimes.map(crime => ({
+            id: crime.crimeId,
+            caseId: `CR-${crime.crimeId}`,
+            title: crime.title,
+            crimeType: crime.crimeType,
+            status: crime.status,
+            time: new Date(crime.dateOccurred).toLocaleDateString(),
+            location: `${crime.location.city}, ${crime.location.state}`,
+            assignedOfficer: crime.administrative 
+                ? `${crime.administrative.firstName} ${crime.administrative.lastName}`
+                : "Unassigned",
+            description: crime.description,
+            role: crime.victim.some(v => v.userId === userId) ? "Victim" : "Accused"
+        }));
+
+        return NextResponse.json(transformedCrimes);
     } catch (error) {
         console.error("Error fetching crimes:", error);
         return NextResponse.json({ error: "Failed to fetch crimes" }, { status: 500 });
