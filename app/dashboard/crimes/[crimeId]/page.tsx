@@ -15,6 +15,7 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"; // If you have a popover, else use Dialog
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function CrimeDetailsPage() {
     const { data: session } = useSession();
@@ -751,13 +752,32 @@ export default function CrimeDetailsPage() {
                     <CardTitle>Case Logs</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <ul className="list-disc list-inside">
-                        {crime.crimeLogs.map((log: any) => (
-                            <li key={log.logId}>
-                                <strong>{new Date(log.updatedAt).toLocaleString()}:</strong> {log.update}(by {log.user.firstName} {log.user.lastName})
-                            </li>
-                        ))}
-                    </ul>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Date & Time</TableHead>
+                                <TableHead>Message</TableHead>
+                                <TableHead>User</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {crime.crimeLogs.map((log: any) => (
+                                <TableRow key={log.logId}>
+                                    <TableCell>
+                                        {new Date(log.updatedAt).toLocaleString()}
+                                    </TableCell>
+                                    <TableCell>
+                                        {log.update}
+                                    </TableCell>
+                                    <TableCell>
+                                        {log.user
+                                            ? `${log.user.firstName} ${log.user.lastName}`.trim()
+                                            : "Unknown"}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
         </div >
