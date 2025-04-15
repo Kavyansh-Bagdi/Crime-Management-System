@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"; // If you have a popover, else use Dialog
+
 export default function CrimeDetailsPage() {
     const { data: session } = useSession();
     const isCivilian = (session?.user?.role || "") == "Civilian";
@@ -33,16 +35,12 @@ export default function CrimeDetailsPage() {
         victims: [],
         administrative: null,
     });
-    const [newEvidence, setNewEvidence] = useState<Evidence>({
-        crimeId: 0, // Default value, replace as needed
-        evidenceId: 0, // Default value, replace as needed
+    const [newEvidence, setNewEvidence] = useState({
         title: "",
         description: "",
         img: null,
         mime: "",
         filename: "",
-        createdAt: new Date(), // Default to current129 date
-        submitedBy: session?.user?.id || null,
     });
     const [evidenceList, setEvidenceList] = useState<any[]>([]);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,6 +61,9 @@ export default function CrimeDetailsPage() {
     const [dateOccurred, setDateOccurred] = useState<Date | undefined>(
         formData.dateOccurred ? new Date(formData.dateOccurred) : undefined
     );
+
+    const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+    const [caseLogMessage, setCaseLogMessage] = useState("");
 
     useEffect(() => {
         async function fetchCrimeDetails() {
@@ -143,7 +144,11 @@ export default function CrimeDetailsPage() {
                 });
             } else {
                 // If adding new evidence, include the image
-                const base64 = currentFile ? await fileToBase64(currentFile) : null;
+                let base64 = currentFile ? await fileToBase64(currentFile) : null;
+                // Strip the data URL prefix if present
+                if (base64 && typeof base64 === "string" && base64.startsWith("data:")) {
+                    base64 = base64.substring(base64.indexOf(",") + 1);
+                }
                 evidenceUpdates.push({
                     title: newEvidence.title,
                     description: newEvidence.description,
@@ -198,70 +203,60 @@ export default function CrimeDetailsPage() {
         }
     };
 
-    // ...existing code...
-    const handleUpdateCrime = async () => {
+    const handleUpdateCrime = async (e?: React.FormEvent, message?: string) => {
+        if (e) e.preventDefault();
         try {
-            const crimeResponse = await fetch(`/api/crimes/${crimeId}`);
-            if (!crimeResponse.ok) throw new Error("Failed to refresh crime data");
-
-            const updatedCrimeRaw = await crimeResponse.json();
-
-            // Deep clone to remove any proxy references (XrayWrapper)
-            const updatedCrime = JSON.parse(JSON.stringify(updatedCrimeRaw));
-
-            const {
-                title = "",
-                crimeType = "",
-                status = "",
-                description = "",
-                dateOccurred = "",
-                location = {},
-                accused = [],
-                victim = [],
-                administrative = null,
-            } = updatedCrime;
-
+            const response = await fetch(`/api/crimes/${crimeId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ...formData,
+                    dateOccurred: dateOccurred ? dateOccurred.toISOString() : "",
+                    caseLogMessage: message || "",
+                }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to update crime");
+            }
+            toast.success("Crime updated successfully");
+            // Refresh crime details
+            const updatedCrime = await fetch(`/api/crimes/${crimeId}`).then(res => res.json());
             setCrime(updatedCrime);
-
             setFormData({
-                title,
-                crimeType,
-                status,
-                description,
-                dateOccurred: dateOccurred
-                    ? new Date(dateOccurred).toISOString().slice(0, 16)
+                title: updatedCrime.title || "",
+                crimeType: updatedCrime.crimeType || "",
+                status: updatedCrime.status || "",
+                description: updatedCrime.description || "",
+                dateOccurred: updatedCrime.dateOccurred
+                    ? new Date(updatedCrime.dateOccurred).toISOString().slice(0, 16)
                     : "",
                 location: {
-                    city: location?.city || "",
-                    state: location?.state || "",
-                    country: location?.country || "",
+                    city: updatedCrime.location?.city || "",
+                    state: updatedCrime.location?.state || "",
+                    country: updatedCrime.location?.country || "",
                 },
-                accused: Array.isArray(accused) ? accused.map((a: any) => ({ ...a })) : [],
-                victims: Array.isArray(victim) ? victim.map((v: any) => ({ ...v })) : [],
-                administrative: administrative
-                    ? {
-                        ...administrative,
-                        administrative: administrative.administrative
-                            ? { ...administrative.administrative }
-                            : null,
-                    }
-                    : null,
+                accused: updatedCrime.accused || [],
+                victims: updatedCrime.victim || [],
+                administrative: updatedCrime.administrative || null,
             });
-
-            if (dateOccurred) {
-                setDateOccurred(new Date(dateOccurred));
-            }
+            setDateOccurred(updatedCrime.dateOccurred ? new Date(updatedCrime.dateOccurred) : undefined);
+            setUpdateDialogOpen(false);
+            setCaseLogMessage("");
         } catch (error: any) {
-            console.error("Error in handleUpdateCrime:", error);
-            toast.error(error.message || "Failed to update crime details");
+            toast.error(error.message || "Failed to update crime");
         }
     };
 
-    // ...existing code...
-
     const resetEvidenceForm = () => {
         setDialogOpen(false);
-        setNewEvidence({ title: "", description: "", img: null });
+        setNewEvidence({
+            title: "",
+            description: "",
+            img: null,
+            mime: "",
+            filename: "",
+        });
         setCurrentFile(null);
         setEditingEvidenceIndex(null);
     };
@@ -356,7 +351,7 @@ export default function CrimeDetailsPage() {
                     <CardDescription>{formData.location.city}, {formData.location.state}, {formData.location.country}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="space-y-4">
+                    <form className="space-y-4" onSubmit={e => { e.preventDefault(); setUpdateDialogOpen(true); }}>
                         <CrimeBasicDetails
                             formData={formData}
                             setFormData={setFormData}
@@ -512,9 +507,37 @@ export default function CrimeDetailsPage() {
 
 
                         {(role === "Admin" || role === "Administrative") && (
-                            <Button onClick={handleUpdateCrime}>Update Crime</Button>
+                            <Button type="submit">Update Crime</Button>
                         )}
                     </form>
+                    {/* Update Crime Dialog */}
+                    <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Update Case Log</DialogTitle>
+                                <DialogDescription>
+                                    Please enter a message for the case log describing this update.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <Textarea
+                                placeholder="Enter update message"
+                                value={caseLogMessage}
+                                onChange={e => setCaseLogMessage(e.target.value)}
+                                className="mt-2"
+                            />
+                            <DialogFooter>
+                                <Button
+                                    onClick={() => handleUpdateCrime(undefined, caseLogMessage)}
+                                    disabled={!caseLogMessage.trim()}
+                                >
+                                    Submit Update
+                                </Button>
+                                <Button variant="outline" onClick={() => setUpdateDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </CardContent>
             </Card>
 
