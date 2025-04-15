@@ -8,8 +8,7 @@ export async function GET(request: Request) {
     try {
         const users = await prisma.user.findMany({
             where: {
-                role: 'Administrative',
-                AND: [
+                OR: [
                     {
                         firstName: {
                             contains: query,

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Evidence {
-    title: string; // Updated to match the Prisma schema (if typo is intentional)
+    title: string;
     description: string;
     img: string | null;
     mime?: string;
@@ -44,8 +44,8 @@ interface Form {
     crimeType: string;
     description: string;
     dateOccurred: string;
-    accused: { id: number; name: string }[];
-    victims: { id: number; name: string }[];
+    accused: { id: number }[];
+    victims: { id: number }[];
     location: {
         city: string;
         state: string;
@@ -289,7 +289,7 @@ const CrimeReportForm = () => {
     const handleEditEvidence = (index: number) => {
         const evidenceToEdit = form.evidence[index];
         setNewEvidence(evidenceToEdit);
-        setCurrentFile(null); // Reset file input
+        setCurrentFile(null);
         setEditingIndex(index);
         setDialogOpen(true);
     };
