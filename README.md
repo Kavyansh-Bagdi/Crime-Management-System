@@ -139,7 +139,10 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
    git push origin feature/your-feature-name
    ```
 5. Open a pull request.
-
+## Authors
+- Ankit Sharma
+- Abhinav Kumar Gupta
+- Kavyansh Bagdi
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
