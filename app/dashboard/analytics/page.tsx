@@ -11,6 +11,9 @@ type AnalyticsData = {
     crimeCount: number;
     evidenceCount: number;
     crimesByStatus: { status: string; _count: { _all: number } }[];
+    crimesByCity: { city: string; state: string; country: string; count: number }[];
+    crimesByType: { crimeType: string; _count: { _all: number } }[];
+    crimesByMonth: { year: number; month: number; count: number }[];
     latestFIRs: {
         crimeId: number;
         title: string;
@@ -84,6 +87,78 @@ export default function AnalyticsPage() {
                                 }))}
                             >
                                 <XAxis dataKey="status" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#6366f1" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Crimes by City</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <Skeleton className="h-48 w-full" />
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart
+                                data={data?.crimesByCity.map((item) => ({
+                                    city: item.city,
+                                    count: item.count,
+                                }))}
+                            >
+                                <XAxis dataKey="city" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#10b981" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Crimes by Type</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <Skeleton className="h-48 w-full" />
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart
+                                data={data?.crimesByType.map((item) => ({
+                                    type: item.crimeType,
+                                    count: item._count._all,
+                                }))}
+                            >
+                                <XAxis dataKey="type" />
+                                <YAxis allowDecimals={false} />
+                                <Tooltip />
+                                <Bar dataKey="count" fill="#f59e42" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Crimes by Month (Last 12 Months)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <Skeleton className="h-48 w-full" />
+                    ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart
+                                data={data?.crimesByMonth.map((item) => ({
+                                    month: `${item.year}-${item.month.toString().padStart(2, "0")}`,
+                                    count: item.count,
+                                }))}
+                            >
+                                <XAxis dataKey="month" />
                                 <YAxis allowDecimals={false} />
                                 <Tooltip />
                                 <Bar dataKey="count" fill="#6366f1" />
